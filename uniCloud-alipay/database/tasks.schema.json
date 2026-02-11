@@ -1,0 +1,176 @@
+{
+  "bsonType": "object",
+  "required": ["publisher_id", "community_id", "task_type", "title", "description", "reward"],
+  "permission": {
+    "read": true,
+    "create": "auth.uid != null",
+    "update": "doc.publisher_id == auth.uid || doc.receiver_id == auth.uid || auth.permission.includes('admin')",
+    "delete": "auth.permission.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "Task ID"
+    },
+    "publisher_id": {
+      "bsonType": "string",
+      "title": "Publisher ID",
+      "description": "User who published the task",
+      "foreignKey": "uni-id-users._id"
+    },
+    "receiver_id": {
+      "bsonType": "string",
+      "title": "Receiver ID",
+      "description": "User who accepted the task",
+      "foreignKey": "uni-id-users._id"
+    },
+    "community_id": {
+      "bsonType": "string",
+      "title": "Community ID",
+      "description": "Task location community",
+      "foreignKey": "communities._id"
+    },
+    "community_name": {
+      "bsonType": "string",
+      "title": "Community Name",
+      "description": "Denormalized community name for display"
+    },
+    "task_type": {
+      "bsonType": "string",
+      "title": "Task Type",
+      "description": "Category of the task",
+      "enum": ["取快递", "接送小孩", "陪诊", "陪读", "代扔垃圾", "宠物喂养", "其他"]
+    },
+    "custom_type": {
+      "bsonType": "string",
+      "title": "Custom Type",
+      "description": "Custom type name when task_type is '其他'"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "Title",
+      "description": "Task title",
+      "trim": "both",
+      "minLength": 2,
+      "maxLength": 50
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "Description",
+      "description": "Detailed task description",
+      "trim": "both",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "images": {
+      "bsonType": "array",
+      "title": "Images",
+      "description": "Task images (uniCloud fileID array, max 6)",
+      "maxLength": 6,
+      "arrayType": "string"
+    },
+    "address": {
+      "bsonType": "string",
+      "title": "Address",
+      "description": "Detailed task address"
+    },
+    "reward": {
+      "bsonType": "number",
+      "title": "Reward",
+      "description": "Task reward amount (CNY)",
+      "minimum": 5,
+      "maximum": 1000
+    },
+    "service_fee": {
+      "bsonType": "number",
+      "title": "Service Fee",
+      "description": "Platform service fee",
+      "minimum": 0
+    },
+    "total_amount": {
+      "bsonType": "number",
+      "title": "Total Amount",
+      "description": "Total payment = reward + service_fee"
+    },
+    "status": {
+      "bsonType": "string",
+      "title": "Status",
+      "description": "Task status",
+      "enum": ["pending", "in_progress", "waiting_confirm", "completed", "cancelled", "disputed"],
+      "defaultValue": "pending"
+    },
+    "expected_time": {
+      "bsonType": "timestamp",
+      "title": "Expected Time",
+      "description": "Expected completion time"
+    },
+    "completed_at": {
+      "bsonType": "timestamp",
+      "title": "Completed At",
+      "description": "Actual completion time"
+    },
+    "cancelled_at": {
+      "bsonType": "timestamp",
+      "title": "Cancelled At",
+      "description": "Cancellation time"
+    },
+    "cancel_reason": {
+      "bsonType": "string",
+      "title": "Cancel Reason",
+      "description": "Reason for cancellation"
+    },
+    "accepted_at": {
+      "bsonType": "timestamp",
+      "title": "Accepted At",
+      "description": "Task acceptance time"
+    },
+    "receiver_confirmed_at": {
+      "bsonType": "timestamp",
+      "title": "Receiver Confirmed At",
+      "description": "When receiver marked task as done"
+    },
+    "publisher_avatar": {
+      "bsonType": "string",
+      "title": "Publisher Avatar",
+      "description": "Denormalized publisher avatar URL"
+    },
+    "publisher_name": {
+      "bsonType": "string",
+      "title": "Publisher Name",
+      "description": "Denormalized publisher nickname"
+    },
+    "receiver_avatar": {
+      "bsonType": "string",
+      "title": "Receiver Avatar",
+      "description": "Denormalized receiver avatar URL"
+    },
+    "receiver_name": {
+      "bsonType": "string",
+      "title": "Receiver Name",
+      "description": "Denormalized receiver nickname"
+    },
+    "order_no": {
+      "bsonType": "string",
+      "title": "Order Number",
+      "description": "Associated payment order number"
+    },
+    "is_draft": {
+      "bsonType": "bool",
+      "title": "Is Draft",
+      "description": "Whether this is a draft",
+      "defaultValue": false
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "description": "Record creation timestamp",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "Updated At",
+      "description": "Record last update timestamp"
+    }
+  }
+}

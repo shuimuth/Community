@@ -1,0 +1,20 @@
+
+{
+  "name": "community-task-admin",
+  "appid": "",
+  "description": "社区任务平台管理后台",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {},
+  "h5": {
+    "title": "社区任务平台管理后台",
+    "router": {
+      "mode": "hash",
+      "base": "/admin/"
+    },
+    "devServer": {
+      "port": 9090
+    }
+  }
+}

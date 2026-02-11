@@ -1,0 +1,84 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "amount"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": "auth.uid != null",
+    "update": "auth.permission.includes('admin')",
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Withdrawal ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "User ID",
+      "description": "User requesting withdrawal",
+      "foreignKey": "uni-id-users._id"
+    },
+    "amount": {
+      "bsonType": "number",
+      "title": "Amount",
+      "description": "Withdrawal amount",
+      "minimum": 10
+    },
+    "fee": {
+      "bsonType": "number",
+      "title": "Fee",
+      "description": "Withdrawal fee",
+      "defaultValue": 0
+    },
+    "actual_amount": {
+      "bsonType": "number",
+      "title": "Actual Amount",
+      "description": "Amount after fee deduction"
+    },
+    "status": {
+      "bsonType": "string",
+      "title": "Status",
+      "description": "Withdrawal status",
+      "enum": ["pending", "approved", "rejected", "paid", "failed"],
+      "defaultValue": "pending"
+    },
+    "reject_reason": {
+      "bsonType": "string",
+      "title": "Reject Reason",
+      "description": "Reason for rejection"
+    },
+    "payment_id": {
+      "bsonType": "string",
+      "title": "Payment ID",
+      "description": "WeChat enterprise payment ID"
+    },
+    "auditor_id": {
+      "bsonType": "string",
+      "title": "Auditor ID",
+      "description": "Admin who processed the withdrawal"
+    },
+    "audited_at": {
+      "bsonType": "timestamp",
+      "title": "Audited At"
+    },
+    "paid_at": {
+      "bsonType": "timestamp",
+      "title": "Paid At"
+    },
+    "user_nickname": {
+      "bsonType": "string",
+      "title": "User Nickname",
+      "description": "Denormalized for admin display"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "Updated At"
+    }
+  }
+}

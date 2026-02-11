@@ -1,0 +1,21 @@
+{
+  "bsonType": "object",
+  "description": "Product orders collection - Reserved for future e-commerce expansion",
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": "auth.uid != null",
+    "update": "auth.permission.includes('admin')",
+    "delete": false
+  },
+  "properties": {
+    "_id": { "description": "Product Order ID" },
+    "user_id": { "bsonType": "string", "title": "Buyer ID", "foreignKey": "uni-id-users._id" },
+    "merchant_id": { "bsonType": "string", "title": "Merchant ID", "foreignKey": "merchants._id" },
+    "product_id": { "bsonType": "string", "title": "Product ID", "foreignKey": "products._id" },
+    "order_no": { "bsonType": "string", "title": "Order Number" },
+    "amount": { "bsonType": "number", "title": "Amount" },
+    "quantity": { "bsonType": "int", "title": "Quantity" },
+    "status": { "bsonType": "string", "title": "Status", "defaultValue": "pending" },
+    "created_at": { "bsonType": "timestamp", "forceDefaultValue": { "$env": "now" } }
+  }
+}

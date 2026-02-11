@@ -1,0 +1,21 @@
+{
+  "bsonType": "object",
+  "description": "Points records collection - Reserved for future points system expansion",
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": { "description": "Points Record ID" },
+    "user_id": { "bsonType": "string", "title": "User ID", "foreignKey": "uni-id-users._id" },
+    "type": { "bsonType": "string", "title": "Type", "enum": ["earn", "spend"] },
+    "amount": { "bsonType": "int", "title": "Amount" },
+    "balance_after": { "bsonType": "int", "title": "Balance After" },
+    "source": { "bsonType": "string", "title": "Source" },
+    "related_id": { "bsonType": "string", "title": "Related ID" },
+    "description": { "bsonType": "string", "title": "Description" },
+    "created_at": { "bsonType": "timestamp", "forceDefaultValue": { "$env": "now" } }
+  }
+}

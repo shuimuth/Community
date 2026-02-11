@@ -1,0 +1,81 @@
+{
+  "bsonType": "object",
+  "required": ["name"],
+  "permission": {
+    "read": true,
+    "create": "doc._id == auth.uid && auth.permission.includes('admin')",
+    "update": "auth.permission.includes('admin')",
+    "delete": "auth.permission.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "Community ID"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "Community Name",
+      "description": "Name of the residential community",
+      "trim": "both",
+      "minLength": 2,
+      "maxLength": 50
+    },
+    "region": {
+      "bsonType": "string",
+      "title": "Region",
+      "description": "Administrative region (district/area)",
+      "trim": "both"
+    },
+    "address": {
+      "bsonType": "string",
+      "title": "Address",
+      "description": "Detailed street address",
+      "trim": "both"
+    },
+    "location": {
+      "bsonType": "object",
+      "title": "Location",
+      "description": "GeoJSON point for map positioning",
+      "properties": {
+        "type": {
+          "bsonType": "string"
+        },
+        "coordinates": {
+          "bsonType": "array",
+          "description": "[longitude, latitude]"
+        }
+      }
+    },
+    "user_count": {
+      "bsonType": "int",
+      "title": "User Count",
+      "description": "Number of associated users",
+      "defaultValue": 0
+    },
+    "task_count": {
+      "bsonType": "int",
+      "title": "Task Count",
+      "description": "Number of tasks in this community",
+      "defaultValue": 0
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "Status",
+      "description": "0: disabled, 1: active",
+      "defaultValue": 1,
+      "enum": [0, 1]
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "description": "Record creation timestamp",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "Updated At",
+      "description": "Record last update timestamp"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "bsonType": "object",
+  "required": ["key"],
+  "permission": {
+    "read": true,
+    "create": "auth.permission.includes('admin')",
+    "update": "auth.permission.includes('admin')",
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Config ID"
+    },
+    "key": {
+      "bsonType": "string",
+      "title": "Key",
+      "description": "Configuration key name"
+    },
+    "service_fee_rate": {
+      "bsonType": "number",
+      "title": "Service Fee Rate",
+      "description": "Platform service fee rate (e.g., 0.1 = 10%)",
+      "defaultValue": 0.1
+    },
+    "min_withdraw_amount": {
+      "bsonType": "number",
+      "title": "Min Withdraw Amount",
+      "description": "Minimum withdrawal amount",
+      "defaultValue": 10
+    },
+    "withdraw_fee_rate": {
+      "bsonType": "number",
+      "title": "Withdraw Fee Rate",
+      "description": "Withdrawal fee rate",
+      "defaultValue": 0
+    },
+    "min_reward": {
+      "bsonType": "number",
+      "title": "Min Reward",
+      "description": "Minimum task reward",
+      "defaultValue": 5
+    },
+    "max_reward": {
+      "bsonType": "number",
+      "title": "Max Reward",
+      "description": "Maximum task reward",
+      "defaultValue": 1000
+    },
+    "auto_confirm_hours": {
+      "bsonType": "number",
+      "title": "Auto Confirm Hours",
+      "description": "Hours before auto-confirming task completion",
+      "defaultValue": 48
+    },
+    "task_types": {
+      "bsonType": "array",
+      "title": "Task Types",
+      "description": "Available task type list",
+      "arrayType": "string"
+    },
+    "credit_rules": {
+      "bsonType": "object",
+      "title": "Credit Rules",
+      "description": "Credit score change rules",
+      "properties": {
+        "register": { "bsonType": "number", "defaultValue": 100 },
+        "verify": { "bsonType": "number", "defaultValue": 10 },
+        "complete_task": { "bsonType": "number", "defaultValue": 2 },
+        "good_review": { "bsonType": "number", "defaultValue": 3 },
+        "bad_review": { "bsonType": "number", "defaultValue": -5 },
+        "cancel_accepted": { "bsonType": "number", "defaultValue": -10 },
+        "complaint": { "bsonType": "number", "defaultValue": -20 }
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "Updated At"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

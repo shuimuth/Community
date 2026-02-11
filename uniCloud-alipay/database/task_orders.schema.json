@@ -1,0 +1,89 @@
+{
+  "bsonType": "object",
+  "required": ["task_id", "user_id", "order_no", "amount"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": false,
+    "update": "auth.permission.includes('admin')",
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Order ID"
+    },
+    "task_id": {
+      "bsonType": "string",
+      "title": "Task ID",
+      "description": "Reference to tasks._id",
+      "foreignKey": "tasks._id"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "User ID",
+      "description": "User who made the payment",
+      "foreignKey": "uni-id-users._id"
+    },
+    "order_no": {
+      "bsonType": "string",
+      "title": "Order Number",
+      "description": "Unique order number for payment"
+    },
+    "amount": {
+      "bsonType": "number",
+      "title": "Amount",
+      "description": "Payment amount (CNY)"
+    },
+    "reward": {
+      "bsonType": "number",
+      "title": "Reward",
+      "description": "Task reward portion"
+    },
+    "service_fee": {
+      "bsonType": "number",
+      "title": "Service Fee",
+      "description": "Platform service fee portion"
+    },
+    "pay_type": {
+      "bsonType": "string",
+      "title": "Payment Type",
+      "description": "Payment method",
+      "enum": ["wxpay", "balance"]
+    },
+    "status": {
+      "bsonType": "string",
+      "title": "Status",
+      "description": "Order status",
+      "enum": ["pending", "paid", "refunded", "failed"],
+      "defaultValue": "pending"
+    },
+    "transaction_id": {
+      "bsonType": "string",
+      "title": "Transaction ID",
+      "description": "WeChat payment transaction ID"
+    },
+    "refund_id": {
+      "bsonType": "string",
+      "title": "Refund ID",
+      "description": "Refund transaction ID"
+    },
+    "paid_at": {
+      "bsonType": "timestamp",
+      "title": "Paid At"
+    },
+    "refunded_at": {
+      "bsonType": "timestamp",
+      "title": "Refunded At"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "Updated At"
+    }
+  }
+}

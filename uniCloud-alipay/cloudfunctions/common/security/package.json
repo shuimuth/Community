@@ -1,0 +1,7 @@
+
+{
+  "name": "security",
+  "version": "1.0.0",
+  "description": "Common security middleware for cloud functions",
+  "main": "index.js"
+}

@@ -1,0 +1,35 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "community_id"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": "auth.uid != null",
+    "update": false,
+    "delete": "doc.user_id == auth.uid || auth.permission.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "Association ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "User ID",
+      "description": "Reference to uni-id-users._id",
+      "foreignKey": "uni-id-users._id"
+    },
+    "community_id": {
+      "bsonType": "string",
+      "title": "Community ID",
+      "description": "Reference to communities._id",
+      "foreignKey": "communities._id"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "description": "Record creation timestamp",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

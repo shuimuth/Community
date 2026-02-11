@@ -1,0 +1,69 @@
+{
+  "bsonType": "object",
+  "required": ["task_id", "reviewer_id", "reviewee_id", "rating"],
+  "permission": {
+    "read": true,
+    "create": "auth.uid != null",
+    "update": false,
+    "delete": "auth.permission.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "Review ID"
+    },
+    "task_id": {
+      "bsonType": "string",
+      "title": "Task ID",
+      "description": "Related task",
+      "foreignKey": "tasks._id"
+    },
+    "reviewer_id": {
+      "bsonType": "string",
+      "title": "Reviewer ID",
+      "description": "User who wrote the review",
+      "foreignKey": "uni-id-users._id"
+    },
+    "reviewee_id": {
+      "bsonType": "string",
+      "title": "Reviewee ID",
+      "description": "User being reviewed",
+      "foreignKey": "uni-id-users._id"
+    },
+    "reviewer_role": {
+      "bsonType": "string",
+      "title": "Reviewer Role",
+      "description": "Role in the task",
+      "enum": ["publisher", "receiver"]
+    },
+    "rating": {
+      "bsonType": "int",
+      "title": "Rating",
+      "description": "Star rating 1-5",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "content": {
+      "bsonType": "string",
+      "title": "Content",
+      "description": "Review text",
+      "maxLength": 200
+    },
+    "reviewer_name": {
+      "bsonType": "string",
+      "title": "Reviewer Name",
+      "description": "Denormalized reviewer nickname"
+    },
+    "reviewer_avatar": {
+      "bsonType": "string",
+      "title": "Reviewer Avatar",
+      "description": "Denormalized reviewer avatar"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

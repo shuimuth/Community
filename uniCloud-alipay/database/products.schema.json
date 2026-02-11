@@ -1,0 +1,22 @@
+{
+  "bsonType": "object",
+  "description": "Products collection - Reserved for future e-commerce expansion",
+  "permission": {
+    "read": true,
+    "create": "auth.uid != null",
+    "update": "doc.merchant_id == auth.uid || auth.permission.includes('admin')",
+    "delete": "auth.permission.includes('admin')"
+  },
+  "properties": {
+    "_id": { "description": "Product ID" },
+    "merchant_id": { "bsonType": "string", "title": "Merchant ID", "foreignKey": "merchants._id" },
+    "name": { "bsonType": "string", "title": "Product Name" },
+    "description": { "bsonType": "string", "title": "Description" },
+    "price": { "bsonType": "number", "title": "Price" },
+    "images": { "bsonType": "array", "title": "Images", "arrayType": "string" },
+    "category": { "bsonType": "string", "title": "Category" },
+    "stock": { "bsonType": "int", "title": "Stock", "defaultValue": 0 },
+    "status": { "bsonType": "int", "title": "Status", "defaultValue": 1 },
+    "created_at": { "bsonType": "timestamp", "forceDefaultValue": { "$env": "now" } }
+  }
+}

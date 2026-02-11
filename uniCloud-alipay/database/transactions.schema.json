@@ -1,0 +1,67 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "type", "amount"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Transaction ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "User ID",
+      "description": "Transaction user",
+      "foreignKey": "uni-id-users._id"
+    },
+    "type": {
+      "bsonType": "string",
+      "title": "Type",
+      "description": "Transaction type",
+      "enum": ["income", "expense", "withdraw", "refund", "service_fee", "product_income", "product_expense"]
+    },
+    "amount": {
+      "bsonType": "number",
+      "title": "Amount",
+      "description": "Transaction amount (positive for income, negative for expense)"
+    },
+    "balance_after": {
+      "bsonType": "number",
+      "title": "Balance After",
+      "description": "Account balance after this transaction"
+    },
+    "related_id": {
+      "bsonType": "string",
+      "title": "Related ID",
+      "description": "Related task/order/withdrawal ID"
+    },
+    "related_type": {
+      "bsonType": "string",
+      "title": "Related Type",
+      "description": "Type of related record",
+      "enum": ["task", "order", "withdrawal", "product_order"]
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "Description",
+      "description": "Transaction description"
+    },
+    "status": {
+      "bsonType": "string",
+      "title": "Status",
+      "description": "Transaction status",
+      "enum": ["pending", "completed", "failed"],
+      "defaultValue": "completed"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

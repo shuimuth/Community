@@ -1,0 +1,61 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "title", "type"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.permission.includes('admin')",
+    "create": false,
+    "update": "doc.user_id == auth.uid",
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Message ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "User ID",
+      "description": "Message recipient",
+      "foreignKey": "uni-id-users._id"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "Title",
+      "description": "Message title"
+    },
+    "content": {
+      "bsonType": "string",
+      "title": "Content",
+      "description": "Message body"
+    },
+    "type": {
+      "bsonType": "string",
+      "title": "Type",
+      "description": "Message type",
+      "enum": ["task_accepted", "task_completed", "task_cancelled", "task_confirmed", "withdraw_result", "review_received", "system"]
+    },
+    "related_id": {
+      "bsonType": "string",
+      "title": "Related ID",
+      "description": "Related record ID"
+    },
+    "related_type": {
+      "bsonType": "string",
+      "title": "Related Type",
+      "description": "Type of related record",
+      "enum": ["task", "withdrawal", "review", "system"]
+    },
+    "is_read": {
+      "bsonType": "bool",
+      "title": "Is Read",
+      "description": "Whether the message has been read",
+      "defaultValue": false
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

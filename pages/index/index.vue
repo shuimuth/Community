@@ -1,290 +1,319 @@
 <template>
-	<view class="page-container">
-		<!-- 头部区域 -->
-		<view class="header-section fade-in">
-			<view class="logo-wrapper">
-				<image class="logo" src="/static/logo.png" mode="aspectFit"></image>
-			</view>
-			<text class="app-title">社区应用</text>
-			<text class="app-subtitle">选择您的登录方式</text>
-		</view>
+  <view class="index-page">
+    <!-- Custom Header: Location + Search -->
+    <PageHeader mode="search" :show-back="false" placeholder="搜索任务..." @search="goSearch">
+      <template #left>
+        <view class="index-location pressable" @tap="goManageCommunity">
+          <text class="index-location__icon">📍</text>
+          <text class="index-location__text text-ellipsis">{{ currentCommunityName }}</text>
+          <text class="index-location__arrow">›</text>
+        </view>
+      </template>
+    </PageHeader>
 
-		<!-- 登录方式选择卡片 -->
-		<view class="content-section fade-in-up">
-			<view class="card">
-				<view class="card-header">
-					<text class="card-title">登录方式</text>
-				</view>
-				
-				<uni-forms-item label="" labelWidth="0">
-					<uni-data-checkbox 
-						:multiple="false" 
-						v-model="loginType" 
-						:localdata="loginTypeOption"
-						mode="tag"
-						class="login-type-selector">
-					</uni-data-checkbox>
-				</uni-forms-item>
-			</view>
+    <!-- Category filter tabs -->
+    <view class="index-tabs">
+      <scroll-view scroll-x :show-scrollbar="false" class="index-tabs__scroll">
+        <view class="index-tabs__inner">
+          <view
+            v-for="item in typeFilters"
+            :key="item.value"
+            class="index-tabs__item"
+            :class="{ 'index-tabs__item--active': currentType === item.value }"
+            @tap="switchType(item.value)"
+          >
+            <text class="index-tabs__icon">{{ item.icon }}</text>
+            <text class="index-tabs__label">{{ item.label }}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
 
-			<!-- 操作按钮组 -->
-			<view class="action-buttons">
-				<button class="primary-btn" @click="toLogin" hover-class="btn-hover">
-					<text class="btn-icon">🔐</text>
-					<text class="btn-text">前往登录</text>
-				</button>
-				
-				<button class="secondary-btn" @click="toUserInfoPage" hover-class="btn-hover">
-					<text class="btn-icon">👤</text>
-					<text class="btn-text">个人资料</text>
-				</button>
-			</view>
-		</view>
-	</view>
+    <!-- Task list area -->
+    <scroll-view
+      scroll-y
+      class="index-list"
+      :refresher-enabled="true"
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="loadMore"
+    >
+      <!-- Skeleton loading state -->
+      <view v-if="loading && taskList.length === 0" class="index-list__skeleton">
+        <view v-for="i in 4" :key="i" class="skeleton-card" :style="{ animationDelay: `${i * 0.1}s` }"></view>
+      </view>
+
+      <!-- Empty state -->
+      <EmptyState
+        v-else-if="taskList.length === 0"
+        type="task"
+        action-text="去发布任务"
+        action-type="primary"
+        @action="goPublish"
+      />
+
+      <!-- Task card list -->
+      <view v-else class="index-list__content">
+        <TaskCard
+          v-for="(task, idx) in taskList"
+          :key="task._id"
+          :task="task"
+          :anim-index="idx"
+          show-description
+          @tap="goDetail"
+        />
+      </view>
+
+      <!-- Load more -->
+      <view v-if="taskList.length > 0" class="index-list__footer">
+        <view v-if="loading" class="index-load-more">
+          <text class="index-load-more__text">加载中...</text>
+        </view>
+        <view v-else-if="!hasMore" class="index-load-more">
+          <view class="index-load-more__line"></view>
+          <text class="index-load-more__text">没有更多了</text>
+          <view class="index-load-more__line"></view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
 </template>
 
-<script>
-	export default {
-		data() {
-			return {
-				loginType: "weixin",
-				loginTypeOption: [{
-					"value": "weixin",
-					"text": "微信"
-				}, {
-					"value": "univerify",
-					"text": "一键登录"
-				}, {
-					"value": "username",
-					"text": "账号密码"
-				}, {
-					"value": "smsCode",
-					"text": "手机验证码"
-				},  {
-					"value": "weixinMobile",
-					"text": "微信手机号登录"
-				}]
-			}
-		},
-		onLoad() {},
-		methods: {
-			toLogin() {
-				if (this.loginType == 'username') {
-					uni.navigateTo({
-						url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
-					})
-				} else {
-					uni.navigateTo({
-						url: "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=" + this.loginType,
-						animationType:"none",
-						animationDuration:0
-					})
-				}
-			},
-			toUserInfoPage() {
-				uni.navigateTo({
-					url: "/uni_modules/uni-id-pages/pages/userinfo/userinfo?showLoginManage=true"
-				})
-			}
-		}
-	}
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store/user'
+import { formatDate, formatRelativeTime } from '@/utils/common'
+
+const userStore = useUserStore()
+
+// ── State ──
+const loading = ref(false)
+const refreshing = ref(false)
+const taskList = ref<any[]>([])
+const currentType = ref('all')
+const page = ref(1)
+const pageSize = 20
+const total = ref(0)
+const hasMore = ref(true)
+
+// ── Category filters with emoji icons ──
+const typeFilters = [
+  { label: '全部', value: 'all', icon: '🏠' },
+  { label: '取快递', value: '取快递', icon: '📦' },
+  { label: '接送小孩', value: '接送小孩', icon: '👶' },
+  { label: '陪诊', value: '陪诊', icon: '🏥' },
+  { label: '陪读', value: '陪读', icon: '📚' },
+  { label: '代扔垃圾', value: '代扔垃圾', icon: '🗑️' },
+  { label: '宠物喂养', value: '宠物喂养', icon: '🐾' },
+  { label: '其他', value: '其他', icon: '📋' }
+]
+
+// ── Computed ──
+const currentCommunityName = computed(() => {
+  const communities = userStore.communities
+  if (communities.length === 0) return '请选择小区'
+  if (communities.length === 1) return communities[0].name
+  return `${communities[0].name}等${communities.length}个小区`
+})
+
+// ── Lifecycle ──
+onMounted(() => {
+  loadTasks()
+})
+
+// ── Data loading ──
+async function loadTasks(reset = true) {
+  if (reset) {
+    page.value = 1
+    hasMore.value = true
+  }
+
+  loading.value = true
+  try {
+    const taskQuery = uniCloud.importObject('task-query')
+    const res = await taskQuery.getTaskList({
+      community_ids: userStore.communityIds,
+      task_type: currentType.value,
+      status: 'pending',
+      page: page.value,
+      pageSize
+    })
+
+    if (reset) {
+      taskList.value = res.data || []
+    } else {
+      taskList.value = [...taskList.value, ...(res.data || [])]
+    }
+    total.value = res.total || 0
+    hasMore.value = taskList.value.length < total.value
+  } catch (err: any) {
+    console.error('Load tasks error:', err)
+  } finally {
+    loading.value = false
+    refreshing.value = false
+  }
+}
+
+// ── Actions ──
+function switchType(type: string) {
+  currentType.value = type
+  loadTasks()
+}
+
+function onRefresh() {
+  refreshing.value = true
+  loadTasks()
+}
+
+function loadMore() {
+  if (!hasMore.value || loading.value) return
+  page.value++
+  loadTasks(false)
+}
+
+function goDetail(id: string) {
+  uni.navigateTo({ url: `/pages/task/detail?id=${id}` })
+}
+
+function goSearch() {
+  uni.navigateTo({ url: '/pages/task/search' })
+}
+
+function goManageCommunity() {
+  uni.navigateTo({ url: '/pages/community/manage' })
+}
+
+function goPublish() {
+  uni.switchTab({ url: '/pages/publish/index' })
+}
 </script>
 
-<style lang="scss">
-	page {
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		min-height: 100vh;
-	}
+<style lang="scss" scoped>
+.index-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: $uni-bg-color-grey;
+}
 
-	/* 页面容器 */
-	.page-container {
-		min-height: 100vh;
-		padding: 60rpx 40rpx;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
+/* ── Location selector ── */
+.index-location {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 120px;
 
-	/* 淡入动画 */
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(-20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+  &__icon {
+    font-size: 14px;
+    line-height: 1;
+  }
 
-	@keyframes fadeInUp {
-		from {
-			opacity: 0;
-			transform: translateY(30px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+  &__text {
+    font-size: $uni-font-size-sm;
+    font-weight: $uni-font-weight-semibold;
+    color: $uni-text-color;
+    max-width: 80px;
+  }
 
-	.fade-in {
-		animation: fadeIn 0.6s ease-out;
-	}
+  &__arrow {
+    font-size: 16px;
+    color: $uni-text-color-grey;
+    margin-left: -2px;
+  }
+}
 
-	.fade-in-up {
-		animation: fadeInUp 0.8s ease-out;
-		animation-delay: 0.2s;
-		animation-fill-mode: both;
-	}
+/* ── Category tabs ── */
+.index-tabs {
+  background-color: $uni-bg-color;
+  padding: $uni-spacing-sm 0;
+  box-shadow: 0 1px 0 $uni-border-color-light;
 
-	/* 头部区域 */
-	.header-section {
-		text-align: center;
-		margin-bottom: 60rpx;
-	}
+  &__scroll {
+    white-space: nowrap;
+  }
 
-	.logo-wrapper {
-		margin-bottom: 32rpx;
-	}
+  &__inner {
+    display: inline-flex;
+    gap: $uni-spacing-sm;
+    padding: 0 $uni-spacing-base;
+  }
 
-	.logo {
-		width: 160rpx;
-		height: 160rpx;
-		border-radius: 32rpx;
-		box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
-	}
+  &__item {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: $uni-spacing-sm $uni-spacing-md;
+    border-radius: $uni-border-radius-base;
+    background-color: $uni-bg-color-grey;
+    transition: $uni-transition-fast;
+    flex-shrink: 0;
 
-	.app-title {
-		display: block;
-		font-size: 56rpx;
-		font-weight: 700;
-		color: #ffffff;
-		margin-bottom: 16rpx;
-		letter-spacing: 1px;
-		text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
-	}
+    &--active {
+      background-color: $uni-color-primary-pale;
+      box-shadow: inset 0 0 0 1px rgba(255, 122, 69, 0.15);
 
-	.app-subtitle {
-		display: block;
-		font-size: 28rpx;
-		color: rgba(255, 255, 255, 0.9);
-		font-weight: 400;
-	}
+      .index-tabs__label {
+        color: $uni-color-primary;
+        font-weight: $uni-font-weight-semibold;
+      }
+    }
 
-	/* 内容区域 */
-	.content-section {
-		width: 100%;
-		max-width: 680rpx;
-	}
+    &:active {
+      transform: scale(0.95);
+    }
+  }
 
-	/* 卡片样式 */
-	.card {
-		background: rgba(255, 255, 255, 0.95);
-		backdrop-filter: blur(10px);
-		border-radius: 24rpx;
-		padding: 48rpx 40rpx;
-		box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
-		margin-bottom: 40rpx;
-	}
+  &__icon {
+    font-size: 18px;
+    line-height: 1.2;
+  }
 
-	.card-header {
-		margin-bottom: 32rpx;
-	}
+  &__label {
+    font-size: $uni-font-size-xs;
+    color: $uni-text-color-secondary;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+}
 
-	.card-title {
-		font-size: 36rpx;
-		font-weight: 600;
-		color: #1a1a1a;
-	}
+/* ── Task list area ── */
+.index-list {
+  flex: 1;
+  padding: $uni-spacing-md $uni-spacing-base;
 
-	/* 登录方式选择器 */
-	.login-type-selector {
-		width: 100%;
-	}
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $uni-spacing-md;
+  }
 
-	/* 按钮组 */
-	.action-buttons {
-		display: flex;
-		flex-direction: column;
-		gap: 24rpx;
-	}
+  &__content {
+    // TaskCard handles its own margin
+  }
 
-	/* 主按钮 */
-	.primary-btn {
-		height: 96rpx;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		border-radius: 16rpx;
-		border: none;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
-		transition: all 0.3s ease;
-	}
+  &__footer {
+    padding: $uni-spacing-lg 0 $uni-spacing-xl;
+  }
+}
 
-	.primary-btn::after {
-		border: none;
-	}
+/* ── Load more indicator ── */
+.index-load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $uni-spacing-md;
+  padding: $uni-spacing-sm 0;
 
-	.btn-hover {
-		transform: scale(0.98);
-		box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.3);
-	}
+  &__line {
+    width: 32px;
+    height: 1px;
+    background-color: $uni-border-color-light;
+  }
 
-	/* 次要按钮 */
-	.secondary-btn {
-		height: 96rpx;
-		background: rgba(255, 255, 255, 0.95);
-		border-radius: 16rpx;
-		border: 2rpx solid rgba(102, 126, 234, 0.3);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-		transition: all 0.3s ease;
-	}
-
-	.secondary-btn::after {
-		border: none;
-	}
-
-	/* 按钮文字 */
-	.btn-icon {
-		font-size: 40rpx;
-		margin-right: 16rpx;
-	}
-
-	.btn-text {
-		font-size: 32rpx;
-		font-weight: 500;
-	}
-
-	.primary-btn .btn-text {
-		color: #ffffff;
-	}
-
-	.secondary-btn .btn-text {
-		color: #667eea;
-	}
-
-	/* 响应式设计 */
-	@media screen and (min-width: 768px) {
-		.page-container {
-			padding: 100rpx 60rpx;
-		}
-
-		.content-section {
-			max-width: 800rpx;
-		}
-
-		.action-buttons {
-			flex-direction: row;
-		}
-
-		.primary-btn,
-		.secondary-btn {
-			flex: 1;
-		}
-	}
+  &__text {
+    font-size: $uni-font-size-xs;
+    color: $uni-text-color-disable;
+  }
+}
 </style>

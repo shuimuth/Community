@@ -1,12 +1,86 @@
-// 在本文件中可配置云数据库初始化，数据格式见：https://uniapp.dcloud.io/uniCloud/hellodb?id=db-init
-// 编写完毕后对本文件点右键，可按配置规则创建表和添加数据
+// Database initialization configuration
+// Right-click this file to create tables and add data based on schema rules
+// See: https://uniapp.dcloud.io/uniCloud/hellodb?id=db-init
 {
-	"opendb-device":{},
-	"opendb-open-data":{},
-	"opendb-verify-codes":{},
-	"uni-id-device":{},
-	"uni-id-log":{},
-	"uni-id-permissions":{},
-	"uni-id-roles":{},
-	"uni-id-users":{}
+	"opendb-device": {},
+	"opendb-open-data": {},
+	"opendb-verify-codes": {},
+	"uni-id-device": {},
+	"uni-id-log": {},
+	"uni-id-permissions": {
+		"data": [
+			{
+				"permission_id": "ADMIN_ALL",
+				"permission_name": "全部管理权限",
+				"comment": "管理后台所有操作权限",
+				"create_date": 1700000000000
+			}
+		]
+	},
+	"uni-id-roles": {
+		"data": [
+			{
+				"role_id": "admin",
+				"role_name": "管理员",
+				"permission": ["ADMIN_ALL"],
+				"comment": "系统管理员",
+				"create_date": 1700000000000
+			},
+			{
+				"role_id": "super_admin",
+				"role_name": "超级管理员",
+				"permission": ["ADMIN_ALL"],
+				"comment": "超级管理员（所有权限）",
+				"create_date": 1700000000000
+			}
+		]
+	},
+	"uni-id-users": {},
+	"communities": {},
+	"user_communities": {},
+	"tasks": {},
+	"task_orders": {},
+	"transactions": {},
+	"reviews": {},
+	"messages": {},
+	"withdrawals": {},
+	"admin_logs": {},
+	"system_config": {
+		"data": [
+			{
+				"config_key": "platform_settings",
+				"config_name": "平台设置",
+				"config_value": {
+					"platform_fee_rate": 0.1,
+					"min_withdraw_amount": 10,
+					"min_reward": 1,
+					"max_reward": 5000,
+					"auto_confirm_hours": 24,
+					"max_task_images": 6,
+					"initial_credit_score": 100,
+					"credit_verify_bonus": 10,
+					"credit_complete_bonus": 2,
+					"credit_good_review_bonus": 3,
+					"credit_bad_review_penalty": 5,
+					"credit_cancel_penalty": 10,
+					"credit_complaint_penalty": 20,
+					"credit_limit_take_threshold": 60,
+					"credit_limit_publish_threshold": 40
+				},
+				"create_date": 1700000000000,
+				"update_date": 1700000000000
+			},
+			{
+				"config_key": "task_types",
+				"config_name": "任务类型列表",
+				"config_value": ["取快递", "接送小孩", "陪诊", "陪读", "代扔垃圾", "宠物喂养", "其他"],
+				"create_date": 1700000000000,
+				"update_date": 1700000000000
+			}
+		]
+	},
+	"merchants": {},
+	"products": {},
+	"product_orders": {},
+	"points_records": {}
 }

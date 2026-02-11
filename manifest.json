@@ -1,7 +1,7 @@
 {
-    "name" : "uni-id-pages-sample",
+    "name" : "社区任务平台",
     "appid" : "__UNI__A5835D0",
-    "description" : "",
+    "description" : "本地化任务交易平台 - 社区互助服务",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,

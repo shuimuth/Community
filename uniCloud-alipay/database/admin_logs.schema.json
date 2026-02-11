@@ -1,0 +1,72 @@
+{
+  "bsonType": "object",
+  "required": ["admin_id", "action", "module"],
+  "permission": {
+    "read": "auth.permission.includes('admin')",
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "Log ID"
+    },
+    "admin_id": {
+      "bsonType": "string",
+      "title": "Admin ID",
+      "description": "Admin who performed the action",
+      "foreignKey": "uni-id-users._id"
+    },
+    "admin_name": {
+      "bsonType": "string",
+      "title": "Admin Name",
+      "description": "Denormalized admin name"
+    },
+    "action": {
+      "bsonType": "string",
+      "title": "Action",
+      "description": "Action type",
+      "enum": ["create", "update", "delete", "approve", "reject", "disable", "enable", "cancel", "refund", "login"]
+    },
+    "module": {
+      "bsonType": "string",
+      "title": "Module",
+      "description": "Module where action occurred",
+      "enum": ["user", "task", "community", "withdrawal", "dispute", "system", "auth"]
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "Description",
+      "description": "Action description"
+    },
+    "target_id": {
+      "bsonType": "string",
+      "title": "Target ID",
+      "description": "ID of the affected record"
+    },
+    "detail": {
+      "bsonType": "object",
+      "title": "Detail",
+      "description": "Additional detail data"
+    },
+    "ip": {
+      "bsonType": "string",
+      "title": "IP Address",
+      "description": "Client IP address"
+    },
+    "result": {
+      "bsonType": "string",
+      "title": "Result",
+      "description": "Operation result",
+      "enum": ["success", "failed"],
+      "defaultValue": "success"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

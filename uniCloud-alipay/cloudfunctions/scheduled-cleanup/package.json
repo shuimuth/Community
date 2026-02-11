@@ -1,0 +1,14 @@
+
+{
+  "name": "scheduled-cleanup",
+  "version": "1.0.0",
+  "description": "Scheduled cleanup for expired data",
+  "main": "index.js",
+  "triggers": [
+    {
+      "name": "daily-cleanup",
+      "type": "timer",
+      "config": "0 2 * * *"
+    }
+  ]
+}

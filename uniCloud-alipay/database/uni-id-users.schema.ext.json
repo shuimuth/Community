@@ -1,0 +1,99 @@
+{
+  "bsonType": "object",
+  "description": "Extended uni-id-users schema with platform-specific fields",
+  "required": ["mobile"],
+  "permission": {
+    "read": "doc._id == auth.uid || auth.permission.includes('admin')",
+    "create": false,
+    "update": "doc._id == auth.uid || auth.permission.includes('admin')",
+    "delete": "auth.permission.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "User ID"
+    },
+    "credit_score": {
+      "bsonType": "int",
+      "title": "Credit Score",
+      "description": "User credit score (initial: 100)",
+      "defaultValue": 100,
+      "minimum": 0,
+      "maximum": 200
+    },
+    "balance": {
+      "bsonType": "number",
+      "title": "Balance",
+      "description": "Available account balance (CNY)",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "frozen_balance": {
+      "bsonType": "number",
+      "title": "Frozen Balance",
+      "description": "Frozen balance during pending operations",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "real_name": {
+      "bsonType": "string",
+      "title": "Real Name",
+      "description": "User's real name (for identity verification)",
+      "trim": "both"
+    },
+    "id_card": {
+      "bsonType": "string",
+      "title": "ID Card",
+      "description": "Identity card number (encrypted storage)"
+    },
+    "is_verified": {
+      "bsonType": "bool",
+      "title": "Is Verified",
+      "description": "Whether identity verification is completed",
+      "defaultValue": false
+    },
+    "points": {
+      "bsonType": "int",
+      "title": "Points",
+      "description": "Points balance (reserved for future use)",
+      "defaultValue": 0
+    },
+    "member_level": {
+      "bsonType": "int",
+      "title": "Member Level",
+      "description": "Member level (reserved for future use)",
+      "defaultValue": 0
+    },
+    "is_merchant": {
+      "bsonType": "bool",
+      "title": "Is Merchant",
+      "description": "Whether user is a merchant (reserved for e-commerce)",
+      "defaultValue": false
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "Status",
+      "description": "0: normal, 1: disabled",
+      "defaultValue": 0,
+      "enum": [0, 1]
+    },
+    "disable_reason": {
+      "bsonType": "string",
+      "title": "Disable Reason",
+      "description": "Reason for account disabled"
+    },
+    "task_published_count": {
+      "bsonType": "int",
+      "title": "Published Task Count",
+      "defaultValue": 0
+    },
+    "task_completed_count": {
+      "bsonType": "int",
+      "title": "Completed Task Count",
+      "defaultValue": 0
+    },
+    "last_login_at": {
+      "bsonType": "timestamp",
+      "title": "Last Login At"
+    }
+  }
+}
