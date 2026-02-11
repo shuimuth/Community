@@ -1,0 +1,1 @@
+# 文档已移至uni-id-pages文档[https://uniapp.dcloud.net.cn/uniCloud/uni-id-pages.html](https://uniapp.dcloud.net.cn/uniCloud/uni-id-pages.html)

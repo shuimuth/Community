@@ -1,0 +1,110 @@
+/**
+ * 这里是uni-app内置的常用样式变量
+ *
+ * uni-app 官方扩展插件及插件市场（https://ext.dcloud.net.cn）上很多三方插件均使用了这些样式变量
+ * 如果你是插件开发者，建议你使用scss预处理，并在插件代码中直接使用这些变量（无需 import 这个文件），方便用户通过搭积木的方式开发整体风格一致的App
+ *
+ */
+
+/**
+ * 如果你是App开发者（插件使用者），你可以通过修改这些变量来定制自己的插件主题，实现自定义主题功能
+ *
+ * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
+ */
+
+/* 颜色变量 */
+
+/* 行为相关颜色 - 优化后的配色方案 */
+$uni-color-primary: #007aff;
+$uni-color-primary-light: #4da3ff;
+$uni-color-primary-dark: #0056b3;
+$uni-color-success: #4cd964;
+$uni-color-success-light: #7ee68d;
+$uni-color-warning: #f0ad4e;
+$uni-color-warning-light: #f5c77e;
+$uni-color-error: #dd524d;
+$uni-color-error-light: #e77872;
+
+/* 文字基本颜色 */
+$uni-text-color:#333;//基本色
+$uni-text-color-secondary:#666;//次要文字
+$uni-text-color-inverse:#fff;//反色
+$uni-text-color-grey:#999;//辅助灰色，如加载更多的提示信息
+$uni-text-color-placeholder: #808080;
+$uni-text-color-disable:#c0c0c0;
+
+/* 背景颜色 */
+$uni-bg-color:#ffffff;
+$uni-bg-color-grey:#f8f8f8;
+$uni-bg-color-hover:#f1f1f1;//点击状态颜色
+$uni-bg-color-mask:rgba(0, 0, 0, 0.4);//遮罩颜色
+$uni-bg-color-overlay:rgba(0, 0, 0, 0.6);//深色遮罩
+
+/* 边框颜色 */
+$uni-border-color:#c8c7cc;
+$uni-border-color-light:#e5e5e5;
+
+/* 尺寸变量 */
+
+/* 文字尺寸 */
+$uni-font-size-xs:10px;
+$uni-font-size-sm:12px;
+$uni-font-size-base:14px;
+$uni-font-size-lg:16px;
+$uni-font-size-xl:18px;
+$uni-font-size-xxl:20px;
+
+/* 图片尺寸 */
+$uni-img-size-sm:20px;
+$uni-img-size-base:26px;
+$uni-img-size-lg:40px;
+$uni-img-size-xl:60px;
+
+/* Border Radius */
+$uni-border-radius-sm: 4px;
+$uni-border-radius-base: 8px;
+$uni-border-radius-lg: 12px;
+$uni-border-radius-xl: 16px;
+$uni-border-radius-circle: 50%;
+
+/* 水平间距 */
+$uni-spacing-row-xs: 4px;
+$uni-spacing-row-sm: 8px;
+$uni-spacing-row-base: 12px;
+$uni-spacing-row-lg: 16px;
+$uni-spacing-row-xl: 24px;
+
+/* 垂直间距 */
+$uni-spacing-col-xs: 4px;
+$uni-spacing-col-sm: 8px;
+$uni-spacing-col-base: 12px;
+$uni-spacing-col-lg: 16px;
+$uni-spacing-col-xl: 24px;
+
+/* 阴影系统 */
+$uni-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+$uni-shadow-base: 0 4px 8px rgba(0, 0, 0, 0.12);
+$uni-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.16);
+$uni-shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.20);
+
+/* 透明度 */
+$uni-opacity-disabled: 0.4; // 组件禁用态的透明度
+$uni-opacity-hover: 0.8; // 悬停态透明度
+
+/* 动画时长 */
+$uni-animation-duration-fast: 0.2s;
+$uni-animation-duration-base: 0.3s;
+$uni-animation-duration-slow: 0.5s;
+
+/* 过渡效果 */
+$uni-transition-base: all 0.3s ease;
+$uni-transition-fast: all 0.2s ease;
+$uni-transition-slow: all 0.5s ease;
+
+/* 文章场景相关 */
+$uni-color-title: #2C405A; // 文章标题颜色
+$uni-font-size-title:20px;
+$uni-color-subtitle: #555555; // 二级标题颜色
+$uni-font-size-subtitle:26px;
+$uni-color-paragraph: #3F536E; // 文章段落颜色
+$uni-font-size-paragraph:15px;
