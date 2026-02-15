@@ -9,7 +9,7 @@
     </view>
 
     <!-- Scrollable form content -->
-    <scroll-view scroll-y class="publish-body">
+    <view class="publish-body">
       <uni-forms ref="formRef" :modelValue="formData" :rules="formRules" label-position="top">
 
         <!-- Section 1: Task type -->
@@ -111,15 +111,14 @@
           </uni-forms-item>
         </view>
 
-        <!-- Section 4: Time & Reward -->
-        <view class="form-card anim-fade-up" style="animation-delay: 0.15s">
+        <!-- Section 4: Expected time -->
+        <view class="form-card form-card--datetime anim-fade-up" style="animation-delay: 0.15s">
           <view class="form-card__header">
-            <text class="form-card__icon">💰</text>
-            <text class="form-card__title">时间与报酬</text>
-            <text class="form-card__required">*</text>
+            <text class="form-card__icon">⏰</text>
+            <text class="form-card__title">期望完成时间</text>
           </view>
 
-          <uni-forms-item label="期望完成时间" name="expected_time" class="form-card__item">
+          <uni-forms-item label="" name="expected_time" class="form-card__item">
             <uni-datetime-picker
               type="datetime"
               v-model="formData.expected_time"
@@ -127,6 +126,15 @@
               :clear-icon="true"
             />
           </uni-forms-item>
+        </view>
+
+        <!-- Section 5: Reward -->
+        <view class="form-card anim-fade-up" style="animation-delay: 0.2s">
+          <view class="form-card__header">
+            <text class="form-card__icon">💰</text>
+            <text class="form-card__title">设置报酬</text>
+            <text class="form-card__required">*</text>
+          </view>
 
           <uni-forms-item label="任务报酬" name="reward" required class="form-card__item">
             <view class="reward-box">
@@ -160,8 +168,8 @@
           </view>
         </view>
 
-        <!-- Section 5: Images -->
-        <view class="form-card anim-fade-up" style="animation-delay: 0.2s">
+        <!-- Section 6: Images -->
+        <view class="form-card anim-fade-up" style="animation-delay: 0.25s">
           <view class="form-card__header">
             <text class="form-card__icon">📸</text>
             <text class="form-card__title">图片补充</text>
@@ -185,7 +193,7 @@
 
       <!-- Bottom spacing for action bar -->
       <view class="publish-body__spacer"></view>
-    </scroll-view>
+    </view>
 
     <!-- Bottom action bar -->
     <view class="action-bar safe-area-bottom">
@@ -512,6 +520,8 @@ async function handleSubmit() {
   box-shadow: $uni-shadow-card;
   padding: $uni-spacing-base;
   margin-bottom: $uni-spacing-md;
+  position: relative;
+  z-index: 1;
 
   &__header {
     display: flex;
@@ -551,6 +561,13 @@ async function handleSubmit() {
   &__item {
     margin-bottom: 0;
   }
+}
+
+/* ── DateTime picker card z-index fix ── */
+.form-card--datetime {
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 }
 
 /* ── Type selection chips ── */
@@ -838,5 +855,44 @@ async function handleSubmit() {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+</style>
+
+<!-- Non-scoped styles to penetrate uni-datetime-picker component internals -->
+<style lang="scss">
+.form-card--datetime {
+  .uni-date-picker__container {
+    position: relative;
+    z-index: 999;
+  }
+
+  .uni-date-single--x,
+  .uni-date-range--x {
+    z-index: 999;
+  }
+
+  .uni-date-mask--pc {
+    z-index: 998;
+  }
+
+  .uni-calendar {
+    z-index: 999;
+  }
+
+  .uni-calendar__mask {
+    z-index: 998;
+  }
+
+  .uni-calendar__content {
+    z-index: 999;
+  }
+
+  .uni-date {
+    overflow: visible;
+  }
+
+  .uni-date-editor {
+    overflow: visible;
+  }
 }
 </style>
