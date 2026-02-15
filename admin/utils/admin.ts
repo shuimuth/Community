@@ -129,6 +129,12 @@ export const adminMenus = [
     path: '/pages/withdraw/list'
   },
   {
+    key: 'verify',
+    title: '实名审核',
+    icon: 'checkmark-circle',
+    path: '/pages/verify/list'
+  },
+  {
     key: 'community',
     title: '小区管理',
     icon: 'location',

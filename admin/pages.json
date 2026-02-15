@@ -50,6 +50,12 @@
       }
     },
     {
+      "path": "pages/verify/list",
+      "style": {
+        "navigationBarTitleText": "实名审核"
+      }
+    },
+    {
       "path": "pages/community/list",
       "style": {
         "navigationBarTitleText": "小区管理"
