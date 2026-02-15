@@ -81,6 +81,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { formatDate, formatRelativeTime } from '@/utils/common'
 
@@ -114,12 +115,24 @@ const currentCommunityName = computed(() => {
 })
 
 // ── Lifecycle ──
+let isFirstLoad = true
+
 onMounted(() => {
   loadTasks()
   // Listen for community change event
   uni.$on('community-changed', () => {
     loadTasks()
   })
+})
+
+onShow(() => {
+  // Skip the first show since onMounted already loads
+  if (isFirstLoad) {
+    isFirstLoad = false
+    return
+  }
+  // Reload tasks when returning to this page (e.g. after cancelling a task)
+  loadTasks()
 })
 
 onUnmounted(() => {
