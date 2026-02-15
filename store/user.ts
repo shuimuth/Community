@@ -1,5 +1,16 @@
 import { defineStore } from 'pinia'
 
+interface RealnameAuth {
+  type: number               // 0: personal user
+  auth_status: number        // 0: not verified, 1: pending, 2: approved, 3: rejected
+  real_name: string          // Real name
+  identity: string           // ID card number
+  id_card_front?: string     // ID card front photo URL
+  id_card_back?: string      // ID card back photo URL
+  in_hand?: string           // Hand-held ID card photo URL
+  auth_date?: number         // Verification approval timestamp
+}
+
 interface UserInfo {
   _id: string
   nickname: string
@@ -11,6 +22,7 @@ interface UserInfo {
   balance: number
   frozen_balance: number
   is_verified: boolean
+  realname_auth?: RealnameAuth
   points: number
   member_level: number
   is_merchant: boolean

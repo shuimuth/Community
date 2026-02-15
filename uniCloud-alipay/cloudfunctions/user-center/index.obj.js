@@ -85,7 +85,8 @@ module.exports = {
         mobile: 1,
         gender: 1,
         role: 1,
-        status: 1
+        status: 1,
+        realname_auth: 1
       })
       .get()
 
@@ -96,12 +97,15 @@ module.exports = {
     const profile = await _getOrCreateProfile(this.uid)
 
     // Merge user info and profile
+    // Determine is_verified from realname_auth
+    const isVerified = user.realname_auth?.auth_status === 2
+
     return {
       ...user,
       credit_score: profile.credit_score,
       balance: profile.balance,
       frozen_balance: profile.frozen_balance,
-      is_verified: profile.is_verified,
+      is_verified: isVerified,
       points: profile.points,
       member_level: profile.member_level,
       is_merchant: profile.is_merchant
@@ -272,46 +276,74 @@ module.exports = {
   },
 
   /**
-   * Get identity verification status
+   * Get identity verification status from uni-id-users.realname_auth
    */
   async getVerifyStatus() {
-    const profile = await _getOrCreateProfile(this.uid)
+    const res = await db.collection('uni-id-users')
+      .doc(this.uid)
+      .field({ realname_auth: 1, mobile: 1 })
+      .get()
+
+    const user = (res.data && res.data.length > 0) ? res.data[0] : null
+    const auth = user?.realname_auth || null
 
     return {
-      is_verified: profile.is_verified || false,
-      real_name: profile.real_name || '',
-      id_card: profile.id_card || '',
-      verified_at: profile.verified_at || null
+      auth_status: auth?.auth_status ?? 0,
+      type: auth?.type ?? 0,
+      real_name: auth?.real_name || '',
+      identity: auth?.identity || '',
+      id_card_front: auth?.id_card_front || '',
+      id_card_back: auth?.id_card_back || '',
+      in_hand: auth?.in_hand || '',
+      auth_date: auth?.auth_date || null,
+      mobile: user?.mobile || ''
     }
   },
 
   /**
-   * Submit identity verification
+   * Submit identity verification using uni-id-users.realname_auth
    */
   async submitVerification(params) {
-    const { real_name, id_card } = params || {}
+    const { real_name, identity, id_card_front, id_card_back, in_hand } = params || {}
 
     // Validate name
     if (!real_name || real_name.length < 2 || real_name.length > 20) {
       throw new Error('请输入正确的姓名（2-20个字符）')
     }
 
-    // Validate ID card (18 digits, last one can be X)
-    if (!id_card || !/^\d{17}[\dXx]$/.test(id_card)) {
+    // Validate ID card number (18 digits, last one can be X)
+    if (!identity || !/^\d{17}[\dXx]$/.test(identity)) {
       throw new Error('请输入正确的18位身份证号')
     }
 
-    // Check if already verified
-    const profile = await _getOrCreateProfile(this.uid)
-    if (profile.is_verified) {
+    // Validate photos
+    if (!id_card_front) {
+      throw new Error('请上传身份证正面照片')
+    }
+    if (!id_card_back) {
+      throw new Error('请上传身份证反面照片')
+    }
+
+    // Check current auth status
+    const userRes = await db.collection('uni-id-users')
+      .doc(this.uid)
+      .field({ realname_auth: 1 })
+      .get()
+
+    const currentAuth = (userRes.data && userRes.data.length > 0) ? userRes.data[0]?.realname_auth : null
+    if (currentAuth?.auth_status === 2) {
       throw new Error('您已完成实名认证，无需重复认证')
+    }
+    if (currentAuth?.auth_status === 1) {
+      throw new Error('您的认证正在审核中，请耐心等待')
     }
 
     // Check if ID card is already used by another user
-    const existRes = await db.collection('user-profile')
+    const existRes = await db.collection('uni-id-users')
       .where({
-        id_card: id_card,
-        user_id: dbCmd.neq(this.uid)
+        _id: dbCmd.neq(this.uid),
+        'realname_auth.identity': identity,
+        'realname_auth.auth_status': dbCmd.in([1, 2])
       })
       .count()
 
@@ -319,23 +351,23 @@ module.exports = {
       throw new Error('该身份证号已被其他账户使用')
     }
 
-    // Update profile with verification info
+    // Update realname_auth in uni-id-users
     const now = Date.now()
-    await _updateProfile(this.uid, {
-      real_name,
-      id_card,
-      is_verified: true,
-      verified_at: now,
-      credit_score: dbCmd.inc(10)
-    })
-
-    // Also update real_name in uni-id-users for display purposes
     await db.collection('uni-id-users').doc(this.uid).update({
+      realname_auth: {
+        type: 0,
+        auth_status: 1,
+        real_name,
+        identity,
+        id_card_front: id_card_front || '',
+        id_card_back: id_card_back || '',
+        in_hand: in_hand || ''
+      },
       real_name,
       updated_at: now
     })
 
-    return { success: true, message: '实名认证成功' }
+    return { success: true, message: '认证资料已提交，请等待审核' }
   },
 
   /**
