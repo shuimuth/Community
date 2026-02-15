@@ -153,11 +153,11 @@ module.exports = {
     if (!task_id) throw new Error('Task ID is required')
 
     const res = await db.collection('tasks').doc(task_id).get()
-    if (!res.data || res.data.length === 0) {
-      throw new Error('Task not found')
+    // Compatible with both array and single object return formats
+    const task = Array.isArray(res.data) ? res.data[0] : res.data
+    if (!task) {
+      throw new Error('Task not found, task_id=' + task_id)
     }
-
-    const task = res.data[0]
 
     // Get publisher info
     let publisher = null
@@ -165,12 +165,22 @@ module.exports = {
       const pubRes = await db.collection('uni-id-users')
         .doc(task.publisher_id)
         .field({
-          _id: 1, nickname: 1, avatar: 1,
-          credit_score: 1, task_published_count: 1,
-          task_completed_count: 1, mobile: 1
+          _id: 1, nickname: 1, avatar: 1, mobile: 1
         })
         .get()
       publisher = pubRes.data?.[0] || null
+
+      // Get publisher profile from user-profile
+      if (publisher) {
+        const pubProfileRes = await db.collection('user-profile')
+          .where({ user_id: task.publisher_id })
+          .limit(1)
+          .get()
+        const pubProfile = pubProfileRes.data?.[0] || {}
+        publisher.credit_score = pubProfile.credit_score || 100
+        publisher.task_published_count = pubProfile.task_published_count || 0
+        publisher.task_completed_count = pubProfile.task_completed_count || 0
+      }
     }
 
     // Get receiver info if exists
@@ -179,11 +189,21 @@ module.exports = {
       const recRes = await db.collection('uni-id-users')
         .doc(task.receiver_id)
         .field({
-          _id: 1, nickname: 1, avatar: 1,
-          credit_score: 1, task_completed_count: 1
+          _id: 1, nickname: 1, avatar: 1
         })
         .get()
       receiver = recRes.data?.[0] || null
+
+      // Get receiver profile from user-profile
+      if (receiver) {
+        const recProfileRes = await db.collection('user-profile')
+          .where({ user_id: task.receiver_id })
+          .limit(1)
+          .get()
+        const recProfile = recProfileRes.data?.[0] || {}
+        receiver.credit_score = recProfile.credit_score || 100
+        receiver.task_completed_count = recProfile.task_completed_count || 0
+      }
     }
 
     return {

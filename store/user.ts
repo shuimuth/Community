@@ -29,6 +29,7 @@ interface UserState {
   token: string
   userInfo: UserInfo | null
   communities: CommunityInfo[]
+  currentCommunityId: string  // Current selected community ID for display
   isLogin: boolean
   isInfoComplete: boolean
   hasCommunity: boolean
@@ -39,6 +40,7 @@ export const useUserStore = defineStore('user', {
     token: uni.getStorageSync('uni_id_token') || '',
     userInfo: null,
     communities: [],
+    currentCommunityId: uni.getStorageSync('current_community_id') || '',
     isLogin: false,
     isInfoComplete: false,
     hasCommunity: false
@@ -73,6 +75,16 @@ export const useUserStore = defineStore('user', {
     },
     communityIds(): string[] {
       return this.communities.map(c => c._id)
+    },
+    currentCommunity(): CommunityInfo | null {
+      if (!this.currentCommunityId) return this.communities[0] || null
+      return this.communities.find(c => c._id === this.currentCommunityId) || this.communities[0] || null
+    },
+    currentCommunityName(): string {
+      const current = this.currentCommunity
+      if (!current) return '请选择小区'
+      if (this.communities.length === 1) return current.name
+      return current.name
     }
   },
 
@@ -91,6 +103,16 @@ export const useUserStore = defineStore('user', {
     setCommunities(communities: CommunityInfo[]) {
       this.communities = communities
       this.hasCommunity = communities.length > 0
+      // Auto set current community if not set or invalid
+      if (!this.currentCommunityId || !communities.find(c => c._id === this.currentCommunityId)) {
+        this.currentCommunityId = communities[0]?._id || ''
+        uni.setStorageSync('current_community_id', this.currentCommunityId)
+      }
+    },
+
+    setCurrentCommunity(communityId: string) {
+      this.currentCommunityId = communityId
+      uni.setStorageSync('current_community_id', communityId)
     },
 
     updateBalance(balance: number, frozenBalance?: number) {
@@ -112,10 +134,12 @@ export const useUserStore = defineStore('user', {
       this.token = ''
       this.userInfo = null
       this.communities = []
+      this.currentCommunityId = ''
       this.isLogin = false
       this.isInfoComplete = false
       this.hasCommunity = false
       uni.removeStorageSync('uni_id_token')
+      uni.removeStorageSync('current_community_id')
     }
   }
 })

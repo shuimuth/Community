@@ -58,7 +58,7 @@
                 "oauth" : {
                     "univerify" : {},
                     "weixin" : {
-                        "appid" : "",
+                        "appid" : "wx264257fd07683e75",
                         "UniversalLinks" : ""
                     },
                     "apple" : {}

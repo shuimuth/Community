@@ -1,0 +1,6 @@
+{
+  "name": "init-data",
+  "description": "Initialize database with sample data",
+  "memorySize": 512,
+  "timeout": 60
+}

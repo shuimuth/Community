@@ -104,7 +104,7 @@ module.exports = {
     }
 
     if (creditChange !== 0) {
-      await db.collection('uni-id-users').doc(target_user_id).update({
+      await db.collection('user-profile').where({ user_id: target_user_id }).update({
         credit_score: dbCmd.inc(creditChange),
         updated_at: now
       })
@@ -180,14 +180,12 @@ module.exports = {
     const { user_id } = params || {}
     if (!user_id) throw new Error('用户ID不能为空')
 
-    // Get user basic info
+    // Get user basic info from uni-id-users
     const userRes = await db.collection('uni-id-users')
       .doc(user_id)
       .field({
         nickname: 1,
-        avatar: 1,
-        credit_score: 1,
-        is_verified: 1
+        avatar: 1
       })
       .get()
 
@@ -196,6 +194,10 @@ module.exports = {
     }
 
     const user = userRes.data[0]
+
+    // Get extended profile from user-profile
+    const profileRes = await db.collection('user-profile').where({ user_id }).limit(1).get()
+    const profile = profileRes.data?.[0] || {}
 
     // Get published task count
     const publishedRes = await db.collection('tasks')
@@ -235,8 +237,8 @@ module.exports = {
       _id: user_id,
       nickname: user.nickname || '',
       avatar: user.avatar || '',
-      credit_score: user.credit_score || 0,
-      is_verified: user.is_verified || false,
+      credit_score: profile.credit_score || 0,
+      is_verified: profile.is_verified || false,
       published_count: publishedRes.total || 0,
       completed_count: completedRes.total || 0,
       average_score: averageScore,
@@ -256,18 +258,18 @@ module.exports = {
 
     const now = Date.now()
 
-    // Ensure credit score doesn't go below 0
-    const userRes = await db.collection('uni-id-users')
-      .doc(userId)
-      .field({ credit_score: 1 })
+    // Ensure credit score doesn't go below 0 (read from user-profile)
+    const profileRes = await db.collection('user-profile')
+      .where({ user_id: userId })
+      .limit(1)
       .get()
 
-    if (!userRes.data || userRes.data.length === 0) return
+    if (!profileRes.data || profileRes.data.length === 0) return
 
-    const currentScore = userRes.data[0].credit_score || 0
+    const currentScore = profileRes.data[0].credit_score || 0
     const newScore = Math.max(0, currentScore + change)
 
-    await db.collection('uni-id-users').doc(userId).update({
+    await db.collection('user-profile').where({ user_id: userId }).update({
       credit_score: newScore,
       updated_at: now
     })

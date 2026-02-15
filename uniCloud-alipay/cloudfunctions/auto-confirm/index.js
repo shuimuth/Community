@@ -41,20 +41,22 @@ exports.main = async (event, context) => {
         updated_at: Date.now()
       })
 
-      // Settlement: transfer reward to receiver
-      await db.collection('uni-id-users').doc(task.receiver_id).update({
+      // Settlement: transfer reward to receiver via user-profile
+      await db.collection('user-profile').where({ user_id: task.receiver_id }).update({
         balance: dbCmd.inc(task.reward),
         task_completed_count: dbCmd.inc(1),
-        credit_score: dbCmd.inc(2)
+        credit_score: dbCmd.inc(2),
+        updated_at: Date.now()
       })
 
       // Create transaction record
-      const receiverUser = await db.collection('uni-id-users').doc(task.receiver_id).get()
+      const receiverProfileRes = await db.collection('user-profile').where({ user_id: task.receiver_id }).limit(1).get()
+      const receiverProfile = receiverProfileRes.data?.[0] || {}
       await db.collection('transactions').add({
         user_id: task.receiver_id,
         type: 'income',
         amount: task.reward,
-        balance_after: receiverUser.data?.[0]?.balance || 0,
+        balance_after: receiverProfile.balance || 0,
         related_id: task._id,
         related_type: 'task',
         description: `完成任务"${task.title}"获得报酬（自动确认）`,

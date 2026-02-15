@@ -9,7 +9,7 @@
           <text class="hero__badge-text">{{ communities.length }}/5</text>
         </view>
       </view>
-      <text class="hero__subtitle">关联小区后，任务大厅将展示对应小区的任务</text>
+      <text class="hero__subtitle">点击小区卡片可切换首页显示的小区</text>
     </view>
 
     <!-- Community list -->
@@ -18,7 +18,9 @@
         v-for="(item, index) in communities"
         :key="item._id"
         class="community-card animate-fade-in-up"
+        :class="{ 'community-card--active': item._id === currentCommunityId }"
         :style="{ animationDelay: index * 0.08 + 's' }"
+        @tap="handleSelect(item)"
       >
         <view class="community-card__icon">
           <text class="community-card__icon-emoji">🏘️</text>
@@ -30,12 +32,20 @@
             <text class="community-card__detail-text">{{ item.region || '' }} {{ item.address || '暂无详细地址' }}</text>
           </view>
         </view>
-        <view
-          class="community-card__delete"
-          :class="{ 'community-card__delete--disabled': communities.length <= 1 }"
-          @tap="handleRemove(item)"
-        >
-          <text class="community-card__delete-icon">🗑️</text>
+        <view class="community-card__actions">
+          <view
+            v-if="item._id === currentCommunityId"
+            class="community-card__badge"
+          >
+            <text class="community-card__badge-text">当前</text>
+          </view>
+          <view
+            class="community-card__delete"
+            :class="{ 'community-card__delete--disabled': communities.length <= 1 }"
+            @tap.stop="handleRemove(item)"
+          >
+            <text class="community-card__delete-icon">🗑️</text>
+          </view>
         </view>
       </view>
     </view>
@@ -59,15 +69,15 @@
       <view class="tips-card__list">
         <view class="tips-card__item">
           <view class="tips-card__dot"></view>
+          <text class="tips-card__text">点击小区卡片可切换首页显示的小区</text>
+        </view>
+        <view class="tips-card__item">
+          <view class="tips-card__dot"></view>
           <text class="tips-card__text">至少需要保留 1 个小区</text>
         </view>
         <view class="tips-card__item">
           <view class="tips-card__dot"></view>
           <text class="tips-card__text">最多可关联 5 个小区</text>
-        </view>
-        <view class="tips-card__item">
-          <view class="tips-card__dot"></view>
-          <text class="tips-card__text">任务大厅将展示您关联小区的任务</text>
         </view>
       </view>
     </view>
@@ -97,6 +107,15 @@ import { showToast, showConfirm } from '@/utils/common'
 const userStore = useUserStore()
 
 const communities = computed(() => userStore.communities)
+const currentCommunityId = computed(() => userStore.currentCommunityId)
+
+function handleSelect(item: any) {
+  if (item._id === currentCommunityId.value) return
+  userStore.setCurrentCommunity(item._id)
+  showToast(`已切换到 ${item.name}`, 'success')
+  // Refresh home page data
+  uni.$emit('community-changed')
+}
 
 async function handleRemove(item: any) {
   if (communities.value.length <= 1) {
@@ -208,9 +227,17 @@ function goAddCommunity() {
   border-radius: $uni-border-radius-lg;
   box-shadow: $uni-shadow-sm;
   transition: $uni-transition-fast;
+  cursor: pointer;
+  position: relative;
 
   &:active {
     transform: scale(0.985);
+  }
+
+  &--active {
+    background: linear-gradient(135deg, rgba(255, 122, 69, 0.05) 0%, rgba(255, 122, 69, 0.02) 100%);
+    border: 1.5px solid rgba(255, 122, 69, 0.3);
+    box-shadow: 0 2px 12px rgba(255, 122, 69, 0.15);
   }
 
   // ── Icon ──
@@ -268,6 +295,27 @@ function goAddCommunity() {
   }
 
   // ── Delete ──
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $uni-spacing-xs;
+    flex-shrink: 0;
+  }
+
+  &__badge {
+    padding: 4px 10px;
+    background: $brand-gradient;
+    border-radius: $uni-border-radius-pill;
+    box-shadow: 0 2px 8px rgba(255, 122, 69, 0.25);
+
+    &-text {
+      font-size: $uni-font-size-xs;
+      font-weight: $uni-font-weight-semibold;
+      color: #fff;
+      line-height: 1;
+    }
+  }
+
   &__delete {
     width: 40px;
     height: 40px;

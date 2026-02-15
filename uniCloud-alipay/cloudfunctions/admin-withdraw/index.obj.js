@@ -86,9 +86,10 @@ module.exports = {
 
     // Return frozen amount to user balance
     if (withdrawal.user_id && withdrawal.amount) {
-      await db.collection('uni-id-users').doc(withdrawal.user_id).update({
+      await db.collection('user-profile').where({ user_id: withdrawal.user_id }).update({
         balance: dbCmd.inc(withdrawal.amount),
-        frozen_balance: dbCmd.inc(-withdrawal.amount)
+        frozen_balance: dbCmd.inc(-withdrawal.amount),
+        updated_at: Date.now()
       })
       // Record transaction
       await db.collection('transactions').add({

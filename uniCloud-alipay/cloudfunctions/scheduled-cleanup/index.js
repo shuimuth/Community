@@ -82,8 +82,9 @@ exports.main = async (event, context) => {
 
         // Refund publisher if reward was frozen
         if (task.publisher_id && task.reward) {
-          await db.collection('uni-id-users').doc(task.publisher_id).update({
-            balance: dbCmd.inc(task.reward)
+          await db.collection('user-profile').where({ user_id: task.publisher_id }).update({
+            balance: dbCmd.inc(task.reward),
+            updated_at: Date.now()
           })
           await db.collection('transactions').add({
             user_id: task.publisher_id,

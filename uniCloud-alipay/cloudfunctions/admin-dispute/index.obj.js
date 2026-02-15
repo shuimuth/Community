@@ -112,9 +112,10 @@ module.exports = {
       const taskRes = await db.collection('tasks').doc(order.task_id).get()
       const task = taskRes.data?.[0]
       if (task && task.publisher_id) {
-        // Refund to complainant (publisher)
-        await db.collection('uni-id-users').doc(task.publisher_id).update({
-          balance: dbCmd.inc(refundAmount)
+        // Refund to complainant (publisher) via user-profile
+        await db.collection('user-profile').where({ user_id: task.publisher_id }).update({
+          balance: dbCmd.inc(refundAmount),
+          updated_at: Date.now()
         })
         await db.collection('transactions').add({
           user_id: task.publisher_id,
@@ -137,8 +138,9 @@ module.exports = {
         const halfAmount = (task.reward || 0) / 2
         // Refund half to publisher
         if (task.publisher_id && halfAmount > 0) {
-          await db.collection('uni-id-users').doc(task.publisher_id).update({
-            balance: dbCmd.inc(halfAmount)
+          await db.collection('user-profile').where({ user_id: task.publisher_id }).update({
+            balance: dbCmd.inc(halfAmount),
+            updated_at: Date.now()
           })
           await db.collection('transactions').add({
             user_id: task.publisher_id, type: 'refund', amount: halfAmount,
@@ -148,8 +150,9 @@ module.exports = {
         }
         // Pay half to taker
         if (order.taker_id && halfAmount > 0) {
-          await db.collection('uni-id-users').doc(order.taker_id).update({
-            balance: dbCmd.inc(halfAmount)
+          await db.collection('user-profile').where({ user_id: order.taker_id }).update({
+            balance: dbCmd.inc(halfAmount),
+            updated_at: Date.now()
           })
           await db.collection('transactions').add({
             user_id: order.taker_id, type: 'income', amount: halfAmount,

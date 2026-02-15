@@ -104,7 +104,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { callCloudObject } from '@/utils/request'
 import { showConfirm } from '@/utils/common'
@@ -118,7 +118,7 @@ const availableBalance = ref(0)
 const isVerified = ref(false)
 const minWithdraw = PLATFORM.MIN_WITHDRAW
 
-onLoad(async () => {
+onShow(async () => {
   try {
     const info = await callCloudObject('user-center', 'getUserInfo')
     if (info) {
@@ -397,7 +397,7 @@ async function handleSubmit() {
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: scaleIn $uni-anim-duration-normal $uni-anim-timing-bounce;
+    animation: scaleIn $uni-animation-duration-base cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   &__check-icon {
@@ -526,7 +526,7 @@ async function handleSubmit() {
   &__hint {
     font-size: $uni-font-size-xs;
     color: $uni-text-color-light;
-    animation: fadeIn $uni-anim-duration-normal ease;
+    animation: fadeIn $uni-animation-duration-base ease;
   }
 }
 

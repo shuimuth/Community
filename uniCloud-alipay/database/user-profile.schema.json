@@ -1,16 +1,22 @@
 {
   "bsonType": "object",
-  "description": "Extended uni-id-users schema with platform-specific fields",
-  "required": ["mobile"],
+  "required": ["user_id"],
   "permission": {
-    "read": "doc._id == auth.uid || auth.permission.includes('admin')",
-    "create": false,
-    "update": "doc._id == auth.uid || auth.permission.includes('admin')",
-    "delete": "auth.permission.includes('admin')"
+    "read": "doc.user_id == auth.uid || 'admin' in auth.role",
+    "create": true,
+    "update": "doc.user_id == auth.uid || 'admin' in auth.role",
+    "delete": "'admin' in auth.role"
   },
   "properties": {
     "_id": {
-      "description": "User ID"
+      "description": "ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "User ID",
+      "description": "Associated uni-id-users._id",
+      "foreignKey": "uni-id-users._id",
+      "trim": "both"
     },
     "credit_score": {
       "bsonType": "int",
@@ -51,6 +57,11 @@
       "description": "Whether identity verification is completed",
       "defaultValue": false
     },
+    "verified_at": {
+      "bsonType": "timestamp",
+      "title": "Verified At",
+      "description": "Timestamp when identity verification was completed"
+    },
     "points": {
       "bsonType": "int",
       "title": "Points",
@@ -69,31 +80,32 @@
       "description": "Whether user is a merchant (reserved for e-commerce)",
       "defaultValue": false
     },
-    "status": {
-      "bsonType": "int",
-      "title": "Status",
-      "description": "0: normal, 1: disabled",
-      "defaultValue": 0,
-      "enum": [0, 1]
-    },
-    "disable_reason": {
-      "bsonType": "string",
-      "title": "Disable Reason",
-      "description": "Reason for account disabled"
-    },
     "task_published_count": {
       "bsonType": "int",
       "title": "Published Task Count",
+      "description": "Number of tasks published by user",
       "defaultValue": 0
     },
     "task_completed_count": {
       "bsonType": "int",
       "title": "Completed Task Count",
+      "description": "Number of tasks completed by user",
       "defaultValue": 0
     },
     "last_login_at": {
       "bsonType": "timestamp",
-      "title": "Last Login At"
+      "title": "Last Login At",
+      "description": "Last login timestamp"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "Created At",
+      "description": "Profile creation timestamp"
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "Updated At",
+      "description": "Last update timestamp"
     }
   }
 }

@@ -8,11 +8,18 @@
       <view class="profile-card anim-fade-in" @tap="navigateToUserInfo">
         <view class="profile-card__avatar-wrap">
           <image
+            v-if="displayAvatar"
             class="profile-card__avatar"
-            :src="userInfo?.avatar || '/static/default-avatar.png'"
+            :src="displayAvatar"
             mode="aspectFill"
             lazy-load
           />
+          <view v-else class="profile-card__avatar-default">
+            <text class="profile-card__avatar-default-icon">👤</text>
+            <view class="profile-card__avatar-edit">
+              <text class="profile-card__avatar-edit-icon">📷</text>
+            </view>
+          </view>
           <view v-if="userInfo?.is_verified" class="profile-card__verified">✓</view>
         </view>
         <view class="profile-card__info">
@@ -25,7 +32,7 @@
               <text class="credit-badge__score">{{ userInfo.credit_score || 100 }}</text>
               <text class="credit-badge__label">{{ creditLevelText }}</text>
             </view>
-            <text class="profile-card__id">ID: {{ userInfo._id?.slice(-8) || '--' }}</text>
+
           </view>
         </view>
       </view>
@@ -157,10 +164,56 @@ import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { callCloudObject } from '@/utils/request'
+import { store as uniIdStore } from '@/uni_modules/uni-id-pages/common/store.js'
 
 const userStore = useUserStore()
 
 const userInfo = computed(() => userStore.userInfo)
+
+// Resolved avatar URL (handles cloud:// fileID -> temp URL)
+const resolvedAvatarUrl = ref('')
+
+// Resolve cloud fileID to displayable temp URL
+async function resolveAvatarUrl(url: string): Promise<string> {
+  if (!url) return ''
+  // If it's already an http(s) URL, use it directly
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  // If it's a cloud fileID, get temp URL
+  if (url.startsWith('cloud://')) {
+    try {
+      const res = await uniCloud.getTempFileURL({ fileList: [url] })
+      if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+        return res.fileList[0].tempFileURL
+      }
+    } catch (e) {
+      console.error('getTempFileURL error:', e)
+    }
+  }
+  return url
+}
+
+// Display avatar with proper fallback
+const displayAvatar = computed(() => {
+  // If we have a resolved URL, use it
+  if (resolvedAvatarUrl.value) return resolvedAvatarUrl.value
+  // Fallback: empty string will trigger the default avatar view in template
+  return ''
+})
+
+// Watch for avatar changes and resolve URL
+// Use uni-id-pages store's avatar_file as the single source of truth
+async function refreshAvatar() {
+  // Priority: uni-id-pages store avatar_file > userStore avatar > empty
+  const avatar = uniIdStore.userInfo?.avatar_file?.url
+    || uniIdStore.userInfo?.avatar
+    || userInfo.value?.avatar
+    || ''
+  if (avatar) {
+    resolvedAvatarUrl.value = await resolveAvatarUrl(avatar)
+  } else {
+    resolvedAvatarUrl.value = ''
+  }
+}
 
 // Status bar height
 const statusBarHeight = ref(20)
@@ -176,10 +229,66 @@ onMounted(() => {
 
 // Refresh user info every time the page is shown
 onShow(async () => {
+  // First, check if we have a valid token
+  const token = uni.getStorageSync('uni_id_token')
+  if (!token) {
+    // Not logged in, clear user store
+    userStore.logout()
+    return
+  }
+
+  // Ensure token is set in store
+  if (!userStore.isLogin) {
+    userStore.setToken(token)
+  }
+
+  // Try to sync user info from uni-id-pages store as immediate fallback
+  if (!userStore.userInfo && uniIdStore.hasLogin && uniIdStore.userInfo?._id) {
+    const uniIdInfo = uniIdStore.userInfo
+    userStore.setUserInfo({
+      _id: uniIdInfo._id,
+      nickname: uniIdInfo.nickname || '',
+      avatar: uniIdInfo.avatar_file?.url || uniIdInfo.avatar || '',
+      real_name: uniIdInfo.real_name || '',
+      mobile: uniIdInfo.mobile || '',
+      gender: uniIdInfo.gender || 0,
+      credit_score: 100,
+      balance: 0,
+      frozen_balance: 0,
+      is_verified: false,
+      points: 0,
+      member_level: 0,
+      is_merchant: false,
+      role: uniIdInfo.role || [],
+      status: 0
+    })
+  }
+
+  // Resolve avatar immediately with whatever data we have
+  await refreshAvatar()
+
+  // Then fetch full user info from cloud
   try {
-    const info = await callCloudObject('user-center', 'getUserInfo')
+    const info = await callCloudObject('user-center', 'getUserInfo', undefined, { silent: true })
     if (info) {
+      // If avatar is empty but avatar_file exists, use avatar_file.url
+      if (!info.avatar && info.avatar_file?.url) {
+        info.avatar = info.avatar_file.url
+      }
       userStore.setUserInfo(info)
+
+      // Sync avatar_file to uni-id-pages store for consistency between pages
+      if (info.avatar_file?.url || info.avatar) {
+        const { mutations: uniIdMutations } = await import('@/uni_modules/uni-id-pages/common/store.js')
+        if (info.avatar_file) {
+          uniIdMutations.setUserInfo({ avatar_file: info.avatar_file })
+        } else if (info.avatar) {
+          uniIdMutations.setUserInfo({ avatar_file: { url: info.avatar, name: '', extname: '' } })
+        }
+      }
+
+      // Refresh avatar with new info
+      await refreshAvatar()
 
       // Guide user to complete profile if incomplete
       if (!info.real_name || !info.mobile) {
@@ -199,6 +308,7 @@ onShow(async () => {
     }
   } catch (e) {
     console.error('Refresh user info error:', e)
+    // Don't clear userInfo on error - keep showing whatever we have from uni-id-pages store
   }
 })
 
@@ -235,6 +345,8 @@ function navigateToBalance() {
 function navigateTo(url: string) {
   uni.navigateTo({ url })
 }
+
+
 </script>
 
 <style lang="scss" scoped>
@@ -275,6 +387,23 @@ function navigateTo(url: string) {
     border: 3px solid rgba(255, 255, 255, 0.4);
   }
 
+  &__avatar-default {
+    width: 68px;
+    height: 68px;
+    border-radius: $uni-border-radius-circle;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__avatar-default-icon {
+    font-size: 32px;
+    line-height: 1;
+    opacity: 0.7;
+  }
+
   &__verified {
     position: absolute;
     bottom: 0;
@@ -290,6 +419,24 @@ function navigateTo(url: string) {
     justify-content: center;
     border: 2px solid rgba(255, 255, 255, 0.6);
     font-weight: $uni-font-weight-bold;
+  }
+
+  &__avatar-edit {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background-color: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 0 $uni-border-radius-circle $uni-border-radius-circle;
+  }
+
+  &__avatar-edit-icon {
+    font-size: 12px;
+    line-height: 1;
   }
 
   &__info {

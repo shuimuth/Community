@@ -5,6 +5,33 @@ const uniIdCommon = require('uni-id-common')
 const db = uniCloud.database()
 const dbCmd = db.command
 
+/**
+ * Get system config for task publishing (standalone function)
+ */
+async function _getTaskConfig() {
+  const res = await db.collection('system_config')
+    .where({ key: 'platform_config' })
+    .limit(1)
+    .get()
+
+  if (res.data && res.data.length > 0) {
+    const config = res.data[0]
+    return {
+      service_fee_rate: config.service_fee_rate || 0.1,
+      min_reward: config.min_reward || 5,
+      max_reward: config.max_reward || 1000,
+      task_types: config.task_types || ['取快递', '接送小孩', '陪诊', '陪读', '代扔垃圾', '宠物喂养', '其他']
+    }
+  }
+
+  return {
+    service_fee_rate: 0.1,
+    min_reward: 5,
+    max_reward: 1000,
+    task_types: ['取快递', '接送小孩', '陪诊', '陪读', '代扔垃圾', '宠物喂养', '其他']
+  }
+}
+
 module.exports = {
   _before: async function() {
     const clientInfo = this.getClientInfo()
@@ -20,27 +47,7 @@ module.exports = {
    * Get system config for task publishing
    */
   async getTaskConfig() {
-    const res = await db.collection('system_config')
-      .where({ key: 'platform_config' })
-      .limit(1)
-      .get()
-
-    if (res.data && res.data.length > 0) {
-      const config = res.data[0]
-      return {
-        service_fee_rate: config.service_fee_rate || 0.1,
-        min_reward: config.min_reward || 5,
-        max_reward: config.max_reward || 1000,
-        task_types: config.task_types || ['取快递', '接送小孩', '陪诊', '陪读', '代扔垃圾', '宠物喂养', '其他']
-      }
-    }
-
-    return {
-      service_fee_rate: 0.1,
-      min_reward: 5,
-      max_reward: 1000,
-      task_types: ['取快递', '接送小孩', '陪诊', '陪读', '代扔垃圾', '宠物喂养', '其他']
-    }
+    return await _getTaskConfig()
   },
 
   /**
@@ -70,18 +77,22 @@ module.exports = {
       throw new Error('Reward must be between 5-1000')
     }
 
-    // Check credit score
+    // Check credit score from user-profile
+    const profileRes = await db.collection('user-profile').where({ user_id: this.uid }).limit(1).get()
+    const profile = profileRes.data?.[0]
+    if (profile && (profile.credit_score || 100) < 40) {
+      throw new Error('Credit score too low to publish tasks')
+    }
+
+    // Get basic user info
     const userRes = await db.collection('uni-id-users').doc(this.uid).get()
     if (!userRes.data || userRes.data.length === 0) {
       throw new Error('User not found')
     }
     const user = userRes.data[0]
-    if ((user.credit_score || 100) < 40) {
-      throw new Error('Credit score too low to publish tasks')
-    }
 
     // Get config for fee calculation
-    const config = await this.getTaskConfig()
+    const config = await _getTaskConfig()
     const service_fee = Math.round(reward * config.service_fee_rate * 100) / 100
     const total_amount = Math.round((reward + service_fee) * 100) / 100
 
@@ -128,9 +139,10 @@ module.exports = {
       created_at: Date.now()
     })
 
-    // Update user task count
-    await db.collection('uni-id-users').doc(this.uid).update({
-      task_published_count: dbCmd.inc(1)
+    // Update user task count in user-profile
+    await db.collection('user-profile').where({ user_id: this.uid }).update({
+      task_published_count: dbCmd.inc(1),
+      updated_at: Date.now()
     })
 
     // Update community task count
@@ -248,13 +260,17 @@ module.exports = {
       throw new Error('Cannot accept a draft task')
     }
 
-    // Check credit score
+    // Check credit score from user-profile
+    const profileRes2 = await db.collection('user-profile').where({ user_id: this.uid }).limit(1).get()
+    const acceptProfile = profileRes2.data?.[0]
+    if (acceptProfile && (acceptProfile.credit_score || 100) < 60) {
+      throw new Error('Credit score too low to accept tasks')
+    }
+
+    // Get basic user info
     const userRes = await db.collection('uni-id-users').doc(this.uid).get()
     const user = userRes.data?.[0]
     if (!user) throw new Error('User not found')
-    if ((user.credit_score || 100) < 60) {
-      throw new Error('Credit score too low to accept tasks')
-    }
 
     // Update task (atomic check to prevent race condition)
     const updateRes = await db.collection('tasks')

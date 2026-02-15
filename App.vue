@@ -2,6 +2,7 @@
 	import uniIdPageInit from '@/uni_modules/uni-id-pages/init.js';
 	import { useUserStore } from '@/store/user';
 	import { useAppStore } from '@/store/app';
+	import { store as uniIdStore } from '@/uni_modules/uni-id-pages/common/store.js';
 
 	export default {
 		onLaunch: async function() {
@@ -13,7 +14,30 @@
 			const token = uni.getStorageSync('uni_id_token')
 			if (token) {
 				userStore.setToken(token)
-				// Load user info
+
+				// Immediately sync basic info from uni-id-pages store (local cache, no network needed)
+				if (uniIdStore.hasLogin && uniIdStore.userInfo?._id) {
+					const cachedInfo = uniIdStore.userInfo
+					userStore.setUserInfo({
+						_id: cachedInfo._id,
+						nickname: cachedInfo.nickname || '',
+						avatar: cachedInfo.avatar_file?.url || cachedInfo.avatar || '',
+						real_name: cachedInfo.real_name || '',
+						mobile: cachedInfo.mobile || '',
+						gender: cachedInfo.gender || 0,
+						credit_score: 100,
+						balance: 0,
+						frozen_balance: 0,
+						is_verified: false,
+						points: 0,
+						member_level: 0,
+						is_merchant: false,
+						role: cachedInfo.role || [],
+						status: 0
+					})
+				}
+
+				// Load full user info from cloud (will overwrite above with complete data)
 				try {
 					const userCenter = uniCloud.importObject('user-center')
 					const userInfo = await userCenter.getUserInfo()
@@ -22,6 +46,7 @@
 					}
 				} catch (e) {
 					console.error('Auto login failed:', e)
+					// Keep the cached info from uni-id-pages store
 				}
 
 				// Load user communities

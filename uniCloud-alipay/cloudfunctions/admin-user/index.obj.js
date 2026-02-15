@@ -34,11 +34,21 @@ module.exports = {
     const countRes = await db.collection('uni-id-users').where(where).count()
     const listRes = await db.collection('uni-id-users')
       .where(where)
-      .field({ nickname: 1, avatar: 1, mobile: 1, credit_score: 1, status: 1, register_date: 1, balance: 1, verified: 1 })
+      .field({ nickname: 1, avatar: 1, mobile: 1, status: 1, register_date: 1 })
       .orderBy('register_date', 'desc')
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .get()
+
+    // Merge with user-profile data
+    const list = listRes.data || []
+    for (const user of list) {
+      const profileRes = await db.collection('user-profile').where({ user_id: user._id }).limit(1).get()
+      const profile = profileRes.data?.[0] || {}
+      user.credit_score = profile.credit_score || 100
+      user.balance = profile.balance || 0
+      user.is_verified = profile.is_verified || false
+    }
 
     return {
       list: listRes.data || [],
@@ -55,11 +65,19 @@ module.exports = {
 
     const userRes = await db.collection('uni-id-users')
       .where({ _id: userId })
-      .field({ nickname: 1, avatar: 1, mobile: 1, credit_score: 1, status: 1, register_date: 1, balance: 1, frozen_balance: 1, verified: 1, real_name: 1, community_id: 1, community_name: 1, role: 1 })
+      .field({ nickname: 1, avatar: 1, mobile: 1, status: 1, register_date: 1, real_name: 1, community_id: 1, community_name: 1, role: 1 })
       .get()
 
     const user = userRes.data?.[0]
     if (!user) throw new Error('User not found')
+
+    // Merge with user-profile data
+    const profileRes = await db.collection('user-profile').where({ user_id: userId }).limit(1).get()
+    const profile = profileRes.data?.[0] || {}
+    user.credit_score = profile.credit_score || 100
+    user.balance = profile.balance || 0
+    user.frozen_balance = profile.frozen_balance || 0
+    user.is_verified = profile.is_verified || false
 
     // Get user stats
     const [publishedRes, takenRes, completedRes, reviewRes] = await Promise.all([

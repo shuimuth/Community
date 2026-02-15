@@ -72,18 +72,20 @@ module.exports = {
       updated_at: Date.now()
     })
 
-    // Settlement: transfer reward to receiver balance
-    await db.collection('uni-id-users').doc(task.receiver_id).update({
-      balance: dbCmd.inc(task.reward)
+    // Settlement: transfer reward to receiver balance (user-profile)
+    await db.collection('user-profile').where({ user_id: task.receiver_id }).update({
+      balance: dbCmd.inc(task.reward),
+      updated_at: Date.now()
     })
 
-    // Create transaction record for receiver (income)
-    const receiverUser = await db.collection('uni-id-users').doc(task.receiver_id).get()
+    // Get receiver profile for balance_after calculation
+    const receiverProfileRes = await db.collection('user-profile').where({ user_id: task.receiver_id }).limit(1).get()
+    const receiverProfile = receiverProfileRes.data?.[0] || {}
     await db.collection('transactions').add({
       user_id: task.receiver_id,
       type: 'income',
       amount: task.reward,
-      balance_after: (receiverUser.data?.[0]?.balance || 0) + task.reward,
+      balance_after: receiverProfile.balance || 0,
       related_id: task_id,
       related_type: 'task',
       description: `完成任务"${task.title}"获得报酬`,
@@ -91,10 +93,11 @@ module.exports = {
       created_at: Date.now()
     })
 
-    // Update receiver task count
-    await db.collection('uni-id-users').doc(task.receiver_id).update({
+    // Update receiver task count and credit score in user-profile
+    await db.collection('user-profile').where({ user_id: task.receiver_id }).update({
       task_completed_count: dbCmd.inc(1),
-      credit_score: dbCmd.inc(2) // +2 for completing task
+      credit_score: dbCmd.inc(2), // +2 for completing task
+      updated_at: Date.now()
     })
 
     // Notify receiver
@@ -137,14 +140,15 @@ module.exports = {
     })
 
     // Refund - create refund transaction for publisher
-    const publisherUser = await db.collection('uni-id-users').doc(task.publisher_id).get()
+    const publisherProfileRes = await db.collection('user-profile').where({ user_id: task.publisher_id }).limit(1).get()
+    const publisherProfile = publisherProfileRes.data?.[0] || {}
     const refundAmount = task.total_amount || (task.reward + (task.service_fee || 0))
 
     await db.collection('transactions').add({
       user_id: task.publisher_id,
       type: 'refund',
       amount: refundAmount,
-      balance_after: (publisherUser.data?.[0]?.balance || 0) + refundAmount,
+      balance_after: (publisherProfile.balance || 0) + refundAmount,
       related_id: task_id,
       related_type: 'task',
       description: `取消任务"${task.title}"退款`,
@@ -152,9 +156,10 @@ module.exports = {
       created_at: Date.now()
     })
 
-    // Update publisher balance (refund)
-    await db.collection('uni-id-users').doc(task.publisher_id).update({
-      balance: dbCmd.inc(refundAmount)
+    // Update publisher balance (refund) in user-profile
+    await db.collection('user-profile').where({ user_id: task.publisher_id }).update({
+      balance: dbCmd.inc(refundAmount),
+      updated_at: Date.now()
     })
 
     // Update order status
@@ -277,8 +282,9 @@ module.exports = {
     else if (rating <= 2) creditChange = -5  // Bad review
 
     if (creditChange !== 0) {
-      await db.collection('uni-id-users').doc(reviewee_id).update({
-        credit_score: dbCmd.inc(creditChange)
+      await db.collection('user-profile').where({ user_id: reviewee_id }).update({
+        credit_score: dbCmd.inc(creditChange),
+        updated_at: Date.now()
       })
     }
 

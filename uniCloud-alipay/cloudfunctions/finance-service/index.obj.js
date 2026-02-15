@@ -33,22 +33,22 @@ module.exports = {
       throw new Error(`最低提现金额为${MIN_WITHDRAW}元`)
     }
 
-    // Check user balance and verification status
-    const userRes = await db.collection('uni-id-users')
-      .doc(this.uid)
-      .field({ balance: 1, is_verified: 1, real_name: 1 })
+    // Check user balance and verification status from user-profile
+    const profileRes = await db.collection('user-profile')
+      .where({ user_id: this.uid })
+      .limit(1)
       .get()
 
-    const user = userRes.data && userRes.data[0]
-    if (!user) {
+    const profile = profileRes.data && profileRes.data[0]
+    if (!profile) {
       throw new Error('用户不存在')
     }
 
-    if (!user.is_verified) {
+    if (!profile.is_verified) {
       throw new Error('请先完成实名认证')
     }
 
-    if ((user.balance || 0) < amount) {
+    if ((profile.balance || 0) < amount) {
       throw new Error('余额不足')
     }
 
@@ -57,8 +57,8 @@ module.exports = {
     // Use transaction to ensure atomicity
     const transaction = await db.startTransaction()
     try {
-      // Deduct balance
-      await transaction.collection('uni-id-users').doc(this.uid).update({
+      // Deduct balance from user-profile
+      await transaction.collection('user-profile').where({ user_id: this.uid }).update({
         balance: dbCmd.inc(-amount),
         updated_at: now
       })
@@ -68,7 +68,7 @@ module.exports = {
         user_id: this.uid,
         amount,
         method,
-        real_name: user.real_name || '',
+        real_name: profile.real_name || '',
         status: 'pending',
         created_at: now,
         updated_at: now

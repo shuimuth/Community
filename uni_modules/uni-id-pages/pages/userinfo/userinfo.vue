@@ -1,8 +1,23 @@
 <!-- 用户资料页 -->
 <template>
 	<view class="uni-content">
-		<view class="avatar">
-			<uni-id-pages-avatar width="260rpx" height="260rpx"></uni-id-pages-avatar>
+		<view class="avatar-section" @click="chooseAvatar">
+			<view class="avatar-container">
+				<image
+					v-if="displayAvatar"
+					class="avatar-image"
+					:src="displayAvatar"
+					mode="aspectFill"
+				/>
+				<view v-else class="avatar-placeholder">
+					<text class="avatar-placeholder__icon">👤</text>
+				</view>
+				<!-- Camera overlay -->
+				<view class="avatar-camera">
+					<text class="avatar-camera__icon">📷</text>
+				</view>
+			</view>
+			<text class="avatar-tip">点击更换头像</text>
 		</view>
 		<uni-list>
 			<uni-list-item class="item" @click="setNickname('')" title="昵称" :rightText="userInfo.nickname||'未设置'" link>
@@ -42,6 +57,7 @@ const uniIdCo = uniCloud.importObject("uni-id-co")
     store,
     mutations
   } from '@/uni_modules/uni-id-pages/common/store.js'
+  import { useUserStore } from '@/store/user'
 	export default {
     computed: {
       userInfo() {
@@ -53,6 +69,15 @@ const uniIdCo = uniCloud.importObject("uni-id-co")
 		  }
 
 		  return this.userInfo.realNameAuth.authStatus
+	  },
+	  displayAvatar() {
+		  // Try resolved URL first, then avatar_file url
+		  if (this.resolvedAvatarUrl) return this.resolvedAvatarUrl
+		  if (this.userInfo.avatar_file && this.userInfo.avatar_file.url) {
+			  const url = this.userInfo.avatar_file.url
+			  if (url.startsWith('http://') || url.startsWith('https://')) return url
+		  }
+		  return ''
 	  }
     },
 		data() {
@@ -71,12 +96,15 @@ const uniIdCo = uniCloud.importObject("uni-id-co")
 				// },
 				hasPwd: false,
 				showLoginManage: false ,//通过页面传参隐藏登录&退出登录按钮
-				setNicknameIng:false
+				setNicknameIng:false,
+				resolvedAvatarUrl: ''
 			}
 		},
 		async onShow() {
 			this.univerifyStyle.authButton.title = "本机号码一键绑定"
 			this.univerifyStyle.otherLoginButton.title = "其他号码绑定"
+			// Resolve avatar URL
+			this.resolveAvatar()
 		},
 		async onLoad(e) {
 			if (e.showLoginManage) {
@@ -87,6 +115,75 @@ const uniIdCo = uniCloud.importObject("uni-id-co")
 			this.hasPwd = res.isPasswordSet
 		},
 		methods: {
+			async resolveAvatar() {
+				const avatarFile = this.userInfo.avatar_file
+				if (!avatarFile || !avatarFile.url) {
+					this.resolvedAvatarUrl = ''
+					return
+				}
+				const url = avatarFile.url
+				if (url.startsWith('http://') || url.startsWith('https://')) {
+					this.resolvedAvatarUrl = url
+					return
+				}
+				if (url.startsWith('cloud://')) {
+					try {
+						const res = await uniCloud.getTempFileURL({ fileList: [url] })
+						if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+							this.resolvedAvatarUrl = res.fileList[0].tempFileURL
+						}
+					} catch (e) {
+						console.error('getTempFileURL error:', e)
+					}
+				}
+			},
+			chooseAvatar() {
+				if (!store.hasLogin) {
+					return uni.navigateTo({
+						url: '/uni_modules/uni-id-pages/pages/login/login-withoutpwd'
+					})
+				}
+				uni.chooseImage({
+					count: 1,
+					sizeType: ['compressed'],
+					sourceType: ['album', 'camera'],
+					success: async (res) => {
+						const filePath = res.tempFilePaths[0]
+						const extname = filePath.split('.').pop() || 'jpg'
+						try {
+							uni.showLoading({ title: '上传中...', mask: true })
+							const cloudPath = this.userInfo._id + '' + Date.now()
+							const uploadRes = await uniCloud.uploadFile({
+								filePath,
+								cloudPath,
+								fileType: 'image'
+							})
+						if (uploadRes.fileID) {
+								const avatar_file = {
+									extname: extname,
+									name: cloudPath,
+									url: uploadRes.fileID
+								}
+								// Update uni-id-pages store (triggers DB update)
+								mutations.updateUserInfo({ avatar_file })
+								// Also sync to Pinia userStore so center.vue shows the same avatar
+								const userStore = useUserStore()
+								if (userStore.userInfo) {
+									userStore.setUserInfo({ ...userStore.userInfo, avatar: uploadRes.fileID })
+								}
+								// Resolve the new avatar URL
+								await this.resolveAvatar()
+								uni.showToast({ title: '头像更新成功', icon: 'success' })
+							}
+						} catch (e) {
+							console.error('Upload avatar error:', e)
+							uni.showToast({ title: '上传失败', icon: 'none' })
+						} finally {
+							uni.hideLoading()
+						}
+					}
+				})
+			},
 			login() {
 				uni.navigateTo({
 					url: '/uni_modules/uni-id-pages/pages/login/login-withoutpwd',
@@ -222,6 +319,69 @@ const uniIdCo = uniCloud.importObject("uni-id-co")
 
 	.uni-content {
 		padding: 0;
+	}
+
+	/* Avatar section */
+	.avatar-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 40rpx 0 30rpx;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	}
+
+	.avatar-container {
+		position: relative;
+		width: 180rpx;
+		height: 180rpx;
+		border-radius: 50%;
+		overflow: hidden;
+		border: 6rpx solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+	}
+
+	.avatar-image {
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+	}
+
+	.avatar-placeholder {
+		width: 100%;
+		height: 100%;
+		background-color: rgba(255, 255, 255, 0.25);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.avatar-placeholder__icon {
+		font-size: 70rpx;
+		opacity: 0.7;
+	}
+
+	.avatar-camera {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 48rpx;
+		background-color: rgba(0, 0, 0, 0.45);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.avatar-camera__icon {
+		font-size: 24rpx;
+		line-height: 1;
+	}
+
+	.avatar-tip {
+		margin-top: 16rpx;
+		font-size: 24rpx;
+		color: rgba(255, 255, 255, 0.8);
 	}
 
 	/* #ifndef APP-NVUE */

@@ -60,7 +60,7 @@
           :task="task"
           :anim-index="idx"
           show-description
-          @tap="goDetail"
+          @tap="goDetail(task._id)"
         />
       </view>
 
@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { formatDate, formatRelativeTime } from '@/utils/common'
 
@@ -110,15 +110,20 @@ const typeFilters = [
 
 // ── Computed ──
 const currentCommunityName = computed(() => {
-  const communities = userStore.communities
-  if (communities.length === 0) return '请选择小区'
-  if (communities.length === 1) return communities[0].name
-  return `${communities[0].name}等${communities.length}个小区`
+  return userStore.currentCommunityName
 })
 
 // ── Lifecycle ──
 onMounted(() => {
   loadTasks()
+  // Listen for community change event
+  uni.$on('community-changed', () => {
+    loadTasks()
+  })
+})
+
+onUnmounted(() => {
+  uni.$off('community-changed')
 })
 
 // ── Data loading ──
@@ -131,8 +136,13 @@ async function loadTasks(reset = true) {
   loading.value = true
   try {
     const taskQuery = uniCloud.importObject('task-query')
+    // Use current community if only one is selected, otherwise use all communities
+    const communityIds = userStore.currentCommunity 
+      ? [userStore.currentCommunity._id] 
+      : userStore.communityIds
+    
     const res = await taskQuery.getTaskList({
-      community_ids: userStore.communityIds,
+      community_ids: communityIds,
       task_type: currentType.value,
       status: 'pending',
       page: page.value,

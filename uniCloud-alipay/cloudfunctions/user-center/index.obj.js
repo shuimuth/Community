@@ -5,6 +5,54 @@ const uniIdCommon = require('uni-id-common')
 const db = uniCloud.database()
 const dbCmd = db.command
 
+/**
+ * Helper: Get or create user profile from user-profile collection
+ * @param {string} userId - The user ID
+ * @returns {object} The user profile document
+ */
+async function _getOrCreateProfile(userId) {
+  const res = await db.collection('user-profile')
+    .where({ user_id: userId })
+    .limit(1)
+    .get()
+
+  if (res.data && res.data.length > 0) {
+    return res.data[0]
+  }
+
+  // Auto-create profile if not exists
+  const now = Date.now()
+  const defaultProfile = {
+    user_id: userId,
+    credit_score: 100,
+    balance: 0,
+    frozen_balance: 0,
+    is_verified: false,
+    points: 0,
+    member_level: 0,
+    is_merchant: false,
+    task_published_count: 0,
+    task_completed_count: 0,
+    created_at: now,
+    updated_at: now
+  }
+  const addRes = await db.collection('user-profile').add(defaultProfile)
+  defaultProfile._id = addRes.id
+  return defaultProfile
+}
+
+/**
+ * Helper: Update user profile fields
+ * @param {string} userId - The user ID
+ * @param {object} data - Fields to update
+ */
+async function _updateProfile(userId, data) {
+  data.updated_at = Date.now()
+  await db.collection('user-profile')
+    .where({ user_id: userId })
+    .update(data)
+}
+
 module.exports = {
   _before: async function() {
     // Get client info
@@ -25,6 +73,7 @@ module.exports = {
    * Get current user info
    */
   async getUserInfo() {
+    // Get basic user info from uni-id-users
     const res = await db.collection('uni-id-users')
       .doc(this.uid)
       .field({
@@ -35,22 +84,28 @@ module.exports = {
         real_name: 1,
         mobile: 1,
         gender: 1,
-        credit_score: 1,
-        balance: 1,
-        frozen_balance: 1,
-        is_verified: 1,
-        points: 1,
-        member_level: 1,
-        is_merchant: 1,
         role: 1,
         status: 1
       })
       .get()
 
-    if (res.data && res.data.length > 0) {
-      return res.data[0]
+    const user = (res.data && res.data.length > 0) ? res.data[0] : null
+    if (!user) return null
+
+    // Get extended profile from user-profile
+    const profile = await _getOrCreateProfile(this.uid)
+
+    // Merge user info and profile
+    return {
+      ...user,
+      credit_score: profile.credit_score,
+      balance: profile.balance,
+      frozen_balance: profile.frozen_balance,
+      is_verified: profile.is_verified,
+      points: profile.points,
+      member_level: profile.member_level,
+      is_merchant: profile.is_merchant
     }
-    return null
   },
 
   /**
@@ -136,16 +191,8 @@ module.exports = {
    * Get balance info with recent transactions
    */
   async getBalanceInfo() {
-    // Get user balance
-    const userRes = await db.collection('uni-id-users')
-      .doc(this.uid)
-      .field({
-        balance: 1,
-        frozen_balance: 1
-      })
-      .get()
-
-    const user = userRes.data && userRes.data[0] ? userRes.data[0] : {}
+    // Get user balance from user-profile
+    const profile = await _getOrCreateProfile(this.uid)
 
     // Get total income
     const incomeRes = await db.collection('transactions')
@@ -187,8 +234,8 @@ module.exports = {
       .get()
 
     return {
-      balance: user.balance || 0,
-      frozen_balance: user.frozen_balance || 0,
+      balance: profile.balance || 0,
+      frozen_balance: profile.frozen_balance || 0,
       total_income: totalIncome,
       total_withdraw: totalWithdraw,
       recent_transactions: recentRes.data || []
@@ -228,20 +275,14 @@ module.exports = {
    * Get identity verification status
    */
   async getVerifyStatus() {
-    const res = await db.collection('uni-id-users')
-      .doc(this.uid)
-      .field({
-        is_verified: 1,
-        real_name: 1,
-        id_card: 1,
-        verified_at: 1
-      })
-      .get()
+    const profile = await _getOrCreateProfile(this.uid)
 
-    if (res.data && res.data.length > 0) {
-      return res.data[0]
+    return {
+      is_verified: profile.is_verified || false,
+      real_name: profile.real_name || '',
+      id_card: profile.id_card || '',
+      verified_at: profile.verified_at || null
     }
-    return { is_verified: false }
   },
 
   /**
@@ -261,20 +302,16 @@ module.exports = {
     }
 
     // Check if already verified
-    const userRes = await db.collection('uni-id-users')
-      .doc(this.uid)
-      .field({ is_verified: 1 })
-      .get()
-
-    if (userRes.data && userRes.data[0] && userRes.data[0].is_verified) {
+    const profile = await _getOrCreateProfile(this.uid)
+    if (profile.is_verified) {
       throw new Error('您已完成实名认证，无需重复认证')
     }
 
     // Check if ID card is already used by another user
-    const existRes = await db.collection('uni-id-users')
+    const existRes = await db.collection('user-profile')
       .where({
         id_card: id_card,
-        _id: dbCmd.neq(this.uid)
+        user_id: dbCmd.neq(this.uid)
       })
       .count()
 
@@ -282,16 +319,19 @@ module.exports = {
       throw new Error('该身份证号已被其他账户使用')
     }
 
-    // Update user with verification info
-    // In production, you should call a third-party ID verification API here
+    // Update profile with verification info
     const now = Date.now()
-    await db.collection('uni-id-users').doc(this.uid).update({
+    await _updateProfile(this.uid, {
       real_name,
       id_card,
       is_verified: true,
       verified_at: now,
-      // Add credit score for verification
-      credit_score: dbCmd.inc(10),
+      credit_score: dbCmd.inc(10)
+    })
+
+    // Also update real_name in uni-id-users for display purposes
+    await db.collection('uni-id-users').doc(this.uid).update({
+      real_name,
       updated_at: now
     })
 
