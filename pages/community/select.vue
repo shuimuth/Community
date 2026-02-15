@@ -134,7 +134,7 @@
         </view>
         <view
           class="bottom-bar__btn"
-          :class="{ 'bottom-bar__btn--disabled': selectedList.length === 0 || submitting }"
+          :class="{ 'bottom-bar__btn--disabled': submitting }"
           @tap="handleSubmit"
         >
           <view v-if="submitting" class="bottom-bar__btn-spinner"></view>
@@ -184,7 +184,7 @@ async function loadCommunities(reset = true) {
 
   loading.value = true
   try {
-    const communityService = uniCloud.importObject('community-service')
+    const communityService = uniCloud.importObject('community-service', { customUI: true })
     const res = await communityService.searchCommunities({
       keyword: keyword.value,
       page: page.value,
@@ -243,33 +243,17 @@ const debounceSearch = debounce(() => {
 }, 500)
 
 async function handleSubmit() {
-  if (selectedList.value.length === 0) {
-    showToast('请至少选择一个小区')
-    return
-  }
   if (submitting.value) return
 
   submitting.value = true
   try {
-    const communityService = uniCloud.importObject('community-service')
+    const communityService = uniCloud.importObject('community-service', { customUI: true })
 
-    // Get current user communities
-    const currentCommunities = userStore.communities.map(c => c._id)
-    const newCommunities = selectedList.value.map(c => c._id)
+    const newCommunityIds = selectedList.value.map(c => c._id)
+    const hadCommunities = userStore.communities.length > 0
 
-    // Remove deselected
-    for (const id of currentCommunities) {
-      if (!newCommunities.includes(id)) {
-        await communityService.removeCommunity({ community_id: id })
-      }
-    }
-
-    // Add newly selected
-    for (const id of newCommunities) {
-      if (!currentCommunities.includes(id)) {
-        await communityService.addCommunity({ community_id: id })
-      }
-    }
+    // Batch replace all user-community associations in one call
+    await communityService.setUserCommunities({ community_ids: newCommunityIds })
 
     // Update store
     userStore.setCommunities(selectedList.value)
@@ -277,7 +261,7 @@ async function handleSubmit() {
     showToast('小区选择成功！', 'success')
 
     setTimeout(() => {
-      if (currentCommunities.length === 0) {
+      if (!hadCommunities) {
         uni.switchTab({ url: '/pages/index/index' })
       } else {
         uni.navigateBack()

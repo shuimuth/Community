@@ -9,11 +9,12 @@ module.exports = {
     const clientInfo = this.getClientInfo()
     const uniIdCommon = require('uni-id-common')
     this.uniIdCommon = uniIdCommon.createInstance({ clientInfo })
-    this.userInfo = await this.uniIdCommon.checkToken(clientInfo.uniIdToken)
-    if (!this.userInfo || !this.userInfo.uid) {
+    const payload = await this.uniIdCommon.checkToken(clientInfo.uniIdToken)
+    if (payload.errCode) {
       throw new Error('Unauthorized: Please login first')
     }
-    this.uid = this.userInfo.uid
+    this.userInfo = payload
+    this.uid = payload.uid
   },
 
   /**
@@ -100,21 +101,42 @@ module.exports = {
   },
 
   /**
+   * Batch set user communities (replace all associations at once)
+   */
+  async setUserCommunities(params) {
+    const { community_ids } = params || {}
+    if (!Array.isArray(community_ids)) {
+      throw new Error('community_ids must be an array')
+    }
+    if (community_ids.length > 5) {
+      throw new Error('Maximum 5 communities allowed')
+    }
+
+    const collection = db.collection('user_communities')
+
+    // Remove all existing associations for this user
+    await collection.where({ user_id: this.uid }).remove()
+
+    // Add new associations
+    const now = Date.now()
+    for (const community_id of community_ids) {
+      await collection.add({
+        user_id: this.uid,
+        community_id,
+        created_at: now
+      })
+    }
+
+    return { success: true }
+  },
+
+  /**
    * Remove user-community association
    */
   async removeCommunity(params) {
     const { community_id } = params || {}
     if (!community_id) {
       throw new Error('Community ID is required')
-    }
-
-    // Check remaining count (must keep at least 1)
-    const countRes = await db.collection('user_communities')
-      .where({ user_id: this.uid })
-      .count()
-
-    if (countRes.total <= 1) {
-      throw new Error('Must keep at least 1 community')
     }
 
     await db.collection('user_communities')

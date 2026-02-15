@@ -41,7 +41,6 @@
           </view>
           <view
             class="community-card__delete"
-            :class="{ 'community-card__delete--disabled': communities.length <= 1 }"
             @tap.stop="handleRemove(item)"
           >
             <text class="community-card__delete-icon">🗑️</text>
@@ -73,10 +72,6 @@
         </view>
         <view class="tips-card__item">
           <view class="tips-card__dot"></view>
-          <text class="tips-card__text">至少需要保留 1 个小区</text>
-        </view>
-        <view class="tips-card__item">
-          <view class="tips-card__dot"></view>
           <text class="tips-card__text">最多可关联 5 个小区</text>
         </view>
       </view>
@@ -101,6 +96,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { showToast, showConfirm } from '@/utils/common'
 
@@ -108,6 +104,17 @@ const userStore = useUserStore()
 
 const communities = computed(() => userStore.communities)
 const currentCommunityId = computed(() => userStore.currentCommunityId)
+
+// Reload user communities from server every time the page is shown
+onShow(async () => {
+  try {
+    const communityService = uniCloud.importObject('community-service', { customUI: true })
+    const list = await communityService.getUserCommunities()
+    userStore.setCommunities(list || [])
+  } catch (e) {
+    console.error('Reload communities failed:', e)
+  }
+})
 
 function handleSelect(item: any) {
   if (item._id === currentCommunityId.value) return
@@ -118,17 +125,12 @@ function handleSelect(item: any) {
 }
 
 async function handleRemove(item: any) {
-  if (communities.value.length <= 1) {
-    showToast('至少需要保留1个小区')
-    return
-  }
-
   const confirmed = await showConfirm(`确定移除"${item.name}"吗？`)
   if (!confirmed) return
 
   try {
     uni.showLoading({ title: '移除中...' })
-    const communityService = uniCloud.importObject('community-service')
+    const communityService = uniCloud.importObject('community-service', { customUI: true })
     await communityService.removeCommunity({ community_id: item._id })
 
     // Update store
