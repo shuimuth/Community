@@ -183,25 +183,7 @@
                 />
               </view>
 
-              <!-- Fee breakdown -->
-              <view v-if="formData.reward > 0" class="fee-card">
-                <view class="fee-card__row">
-                  <text class="fee-card__label">任务报酬</text>
-                  <text class="fee-card__value">¥{{ Number(formData.reward).toFixed(2) }}</text>
-                </view>
-                <view class="fee-card__row">
-                  <text class="fee-card__label">平台服务费 ({{ (serviceFeeRate * 100).toFixed(0) }}%)</text>
-                  <text class="fee-card__value">¥{{ serviceFee }}</text>
-                </view>
-                <view class="fee-card__divider"></view>
-                <view class="fee-card__row fee-card__row--total">
-                  <text class="fee-card__label fee-card__label--total">合计支付</text>
-                  <view class="fee-card__total">
-                    <text class="fee-card__total-symbol">¥</text>
-                    <text class="fee-card__total-value">{{ totalAmount }}</text>
-                  </view>
-                </view>
-              </view>
+
             </uni-forms-item>
           </view>
 
@@ -220,7 +202,7 @@
         @tap="handleSubmit"
       >
         <text v-if="submitting">提交中...</text>
-        <text v-else>发布任务 ¥{{ totalAmount }}</text>
+        <text v-else>发布任务 ¥{{ rewardDisplay }}</text>
       </view>
     </view>
   </view>
@@ -277,8 +259,12 @@ const serviceFee = computed(() => {
 
 const totalAmount = computed(() => {
   const r = Number(formData.reward) || 0
-  const fee = Number(serviceFee.value)
-  return (r + fee).toFixed(2)
+  return r.toFixed(2)
+})
+
+const rewardDisplay = computed(() => {
+  const r = Number(formData.reward) || 0
+  return r.toFixed(2)
 })
 
 const formRules = {

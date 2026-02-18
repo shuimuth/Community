@@ -92,9 +92,10 @@ module.exports = {
     const user = userRes.data[0]
 
     // Get config for fee calculation
+    // Service fee is deducted from the receiver's settlement, not charged to the publisher
     const config = await _getTaskConfig()
     const service_fee = Math.round(reward * config.service_fee_rate * 100) / 100
-    const total_amount = Math.round((reward + service_fee) * 100) / 100
+    const total_amount = reward
 
     // Generate order number
     const order_no = 'T' + Date.now() + Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -126,13 +127,15 @@ module.exports = {
     const taskRes = await db.collection('tasks').add(taskData)
 
     // Create task order record
+    // Publisher only pays the reward amount; service fee is deducted from receiver on settlement
     await db.collection('task_orders').add({
       task_id: taskRes.id,
       user_id: this.uid,
       order_no,
-      amount: total_amount,
+      amount: reward,
       reward,
       service_fee,
+      service_fee_from: 'receiver',
       pay_type: 'wxpay',
       status: 'paid', // Simplified: mark as paid directly
       paid_at: Date.now(),
