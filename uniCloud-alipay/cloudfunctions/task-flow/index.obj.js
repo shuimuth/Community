@@ -108,7 +108,7 @@ module.exports = {
     await db.collection('messages').add({
       user_id: task.receiver_id,
       title: '任务报酬到账',
-      content: `任务"${task.title}"已完成，报酬 ¥${receiverEarnings}（已扣除服务费 ¥${service_fee}）已到账`,
+      content: `任务"${task.title}"已完成，报酬 ¥${receiverEarnings} 已到账`,
       type: 'task_confirmed',
       related_id: task_id,
       related_type: 'task',

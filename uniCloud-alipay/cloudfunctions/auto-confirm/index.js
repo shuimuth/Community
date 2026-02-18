@@ -83,7 +83,7 @@ exports.main = async (event, context) => {
         {
           user_id: task.receiver_id,
           title: '任务报酬到账',
-          content: `任务"${task.title}"已自动确认完成，报酬 ¥${receiverEarnings}（已扣除服务费 ¥${service_fee}）已到账`,
+          content: `任务"${task.title}"已自动确认完成，报酬 ¥${receiverEarnings} 已到账`,
           type: 'task_confirmed',
           related_id: task._id,
           related_type: 'task',
