@@ -1,5 +1,5 @@
 <template>
-  <view class="manage-page">
+  <view class="manage-page" v-if="!loading">
     <!-- Hero header -->
     <view class="hero">
       <view class="hero__bg"></view>
@@ -51,7 +51,7 @@
 
     <!-- Empty state -->
     <EmptyState
-      v-else
+      v-if="communities.length === 0"
       icon="🏘️"
       title="暂未关联小区"
       description="添加您所在的小区，发现身边的互助任务"
@@ -104,15 +104,23 @@ const userStore = useUserStore()
 
 const communities = computed(() => userStore.communities)
 const currentCommunityId = computed(() => userStore.currentCommunityId)
+// Loading flag to prevent flash of empty state before data arrives
+const loading = ref(communities.value.length === 0)
 
 // Reload user communities from server every time the page is shown
 onShow(async () => {
+  // Only show loading if there's no cached data
+  if (communities.value.length === 0) {
+    loading.value = true
+  }
   try {
     const communityService = uniCloud.importObject('community-service', { customUI: true })
     const list = await communityService.getUserCommunities()
     userStore.setCommunities(list || [])
   } catch (e) {
     console.error('Reload communities failed:', e)
+  } finally {
+    loading.value = false
   }
 })
 
