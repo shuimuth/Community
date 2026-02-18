@@ -330,7 +330,43 @@ onMounted(async () => {
   }
 })
 
-onShow(() => {
+onShow(async () => {
+  // Sync login state from storage (covers returning from login page)
+  const token = uni.getStorageSync('uni_id_token')
+  if (token && !userStore.isLogin) {
+    userStore.setToken(token)
+
+    // Load config and user data since we just discovered login
+    await loadConfig()
+
+    // Load user info if not yet loaded
+    if (!userStore.userInfo) {
+      try {
+        const userCenter = uniCloud.importObject('user-center')
+        const userInfo = await userCenter.getUserInfo()
+        if (userInfo) {
+          userStore.setUserInfo(userInfo)
+        }
+      } catch (e) {
+        console.error('Load user info error:', e)
+      }
+    }
+
+    // Load communities if not yet loaded
+    if (userStore.communities.length === 0) {
+      try {
+        const communityService = uniCloud.importObject('community-service')
+        const communities = await communityService.getUserCommunities()
+        userStore.setCommunities(communities || [])
+      } catch (e) {
+        console.error('Load communities error:', e)
+      }
+    }
+  } else if (!token && userStore.isLogin) {
+    // Token was removed (e.g. expired), sync logout state
+    userStore.logout()
+  }
+
   // Refresh communities when page is shown (user might have just joined a community)
   if (userStore.isLogin && communityOptions.value.length > 0 && !formData.community_id) {
     if (communityOptions.value.length === 1) {
