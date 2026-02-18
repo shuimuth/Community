@@ -453,6 +453,13 @@ async function handleSubmit() {
 
     showToast('任务发布成功！', 'success')
 
+    // Update local balance after successful publish
+    if (userStore.userInfo) {
+      const deducted = Number(formData.reward) || 0
+      const newBalance = Math.max(0, (userStore.userInfo.balance || 0) - deducted)
+      userStore.updateBalance(newBalance)
+    }
+
     // Reset form after successful publish
     resetForm()
 

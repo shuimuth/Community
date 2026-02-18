@@ -77,11 +77,16 @@ module.exports = {
       throw new Error('Reward must be between 5-1000')
     }
 
-    // Check credit score from user-profile
+    // Check credit score and balance from user-profile
     const profileRes = await db.collection('user-profile').where({ user_id: this.uid }).limit(1).get()
     const profile = profileRes.data?.[0]
     if (profile && (profile.credit_score || 100) < 40) {
       throw new Error('Credit score too low to publish tasks')
+    }
+
+    // Check if publisher has enough balance to pay the reward
+    if (!profile || (profile.balance || 0) < reward) {
+      throw new Error('余额不足，请先充值')
     }
 
     // Get basic user info
@@ -142,10 +147,26 @@ module.exports = {
       created_at: Date.now()
     })
 
-    // Update user task count in user-profile
+    // Deduct reward from publisher balance and update task count in user-profile
     await db.collection('user-profile').where({ user_id: this.uid }).update({
+      balance: dbCmd.inc(-reward),
       task_published_count: dbCmd.inc(1),
       updated_at: Date.now()
+    })
+
+    // Create transaction record for publisher expense
+    const updatedProfileRes = await db.collection('user-profile').where({ user_id: this.uid }).limit(1).get()
+    const updatedProfile = updatedProfileRes.data?.[0] || {}
+    await db.collection('transactions').add({
+      user_id: this.uid,
+      type: 'expense',
+      amount: reward,
+      balance_after: updatedProfile.balance || 0,
+      related_id: taskRes.id,
+      related_type: 'task',
+      description: '发布任务"' + title + '"支付报酬',
+      status: 'completed',
+      created_at: Date.now()
     })
 
     // Update community task count
