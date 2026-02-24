@@ -72,9 +72,13 @@ module.exports = {
       updated_at: Date.now()
     })
 
-    // Settlement: transfer reward to receiver balance (user-profile)
+    // Settlement: transfer reward minus service fee to receiver balance (user-profile)
+    // Service fee is deducted from the receiver's earnings
+    const service_fee = task.service_fee || 0
+    const receiverEarnings = Math.round((task.reward - service_fee) * 100) / 100
+
     await db.collection('user-profile').where({ user_id: task.receiver_id }).update({
-      balance: dbCmd.inc(task.reward),
+      balance: dbCmd.inc(receiverEarnings),
       updated_at: Date.now()
     })
 
@@ -84,11 +88,11 @@ module.exports = {
     await db.collection('transactions').add({
       user_id: task.receiver_id,
       type: 'income',
-      amount: task.reward,
+      amount: receiverEarnings,
       balance_after: receiverProfile.balance || 0,
       related_id: task_id,
       related_type: 'task',
-      description: `完成任务"${task.title}"获得报酬`,
+      description: `完成任务"${task.title}"获得报酬（已扣除平台服务费 ¥${service_fee}）`,
       status: 'completed',
       created_at: Date.now()
     })
@@ -104,7 +108,7 @@ module.exports = {
     await db.collection('messages').add({
       user_id: task.receiver_id,
       title: '任务报酬到账',
-      content: `任务"${task.title}"已完成，报酬 ¥${task.reward} 已到账`,
+      content: `任务"${task.title}"已完成，报酬 ¥${receiverEarnings} 已到账`,
       type: 'task_confirmed',
       related_id: task_id,
       related_type: 'task',
@@ -142,7 +146,8 @@ module.exports = {
     // Refund - create refund transaction for publisher
     const publisherProfileRes = await db.collection('user-profile').where({ user_id: task.publisher_id }).limit(1).get()
     const publisherProfile = publisherProfileRes.data?.[0] || {}
-    const refundAmount = task.total_amount || (task.reward + (task.service_fee || 0))
+    // Publisher only paid the reward amount (service fee is from receiver side)
+    const refundAmount = task.reward
 
     await db.collection('transactions').add({
       user_id: task.publisher_id,

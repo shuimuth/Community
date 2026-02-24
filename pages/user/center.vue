@@ -24,7 +24,7 @@
         </view>
         <view class="profile-card__info">
           <view class="profile-card__name-row">
-            <text class="profile-card__name">{{ userInfo?.nickname || '未登录' }}</text>
+            <text class="profile-card__name">{{ userInfo ? (userInfo.nickname || '未设置昵称') : '未登录' }}</text>
             <text class="profile-card__arrow">›</text>
           </view>
           <view v-if="userInfo" class="profile-card__credit">

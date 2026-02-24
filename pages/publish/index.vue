@@ -183,25 +183,7 @@
                 />
               </view>
 
-              <!-- Fee breakdown -->
-              <view v-if="formData.reward > 0" class="fee-card">
-                <view class="fee-card__row">
-                  <text class="fee-card__label">任务报酬</text>
-                  <text class="fee-card__value">¥{{ Number(formData.reward).toFixed(2) }}</text>
-                </view>
-                <view class="fee-card__row">
-                  <text class="fee-card__label">平台服务费 ({{ (serviceFeeRate * 100).toFixed(0) }}%)</text>
-                  <text class="fee-card__value">¥{{ serviceFee }}</text>
-                </view>
-                <view class="fee-card__divider"></view>
-                <view class="fee-card__row fee-card__row--total">
-                  <text class="fee-card__label fee-card__label--total">合计支付</text>
-                  <view class="fee-card__total">
-                    <text class="fee-card__total-symbol">¥</text>
-                    <text class="fee-card__total-value">{{ totalAmount }}</text>
-                  </view>
-                </view>
-              </view>
+
             </uni-forms-item>
           </view>
 
@@ -220,7 +202,7 @@
         @tap="handleSubmit"
       >
         <text v-if="submitting">提交中...</text>
-        <text v-else>发布任务 ¥{{ totalAmount }}</text>
+        <text v-else>发布任务 ¥{{ rewardDisplay }}</text>
       </view>
     </view>
   </view>
@@ -277,8 +259,12 @@ const serviceFee = computed(() => {
 
 const totalAmount = computed(() => {
   const r = Number(formData.reward) || 0
-  const fee = Number(serviceFee.value)
-  return (r + fee).toFixed(2)
+  return r.toFixed(2)
+})
+
+const rewardDisplay = computed(() => {
+  const r = Number(formData.reward) || 0
+  return r.toFixed(2)
 })
 
 const formRules = {
@@ -330,7 +316,43 @@ onMounted(async () => {
   }
 })
 
-onShow(() => {
+onShow(async () => {
+  // Sync login state from storage (covers returning from login page)
+  const token = uni.getStorageSync('uni_id_token')
+  if (token && !userStore.isLogin) {
+    userStore.setToken(token)
+
+    // Load config and user data since we just discovered login
+    await loadConfig()
+
+    // Load user info if not yet loaded
+    if (!userStore.userInfo) {
+      try {
+        const userCenter = uniCloud.importObject('user-center')
+        const userInfo = await userCenter.getUserInfo()
+        if (userInfo) {
+          userStore.setUserInfo(userInfo)
+        }
+      } catch (e) {
+        console.error('Load user info error:', e)
+      }
+    }
+
+    // Load communities if not yet loaded
+    if (userStore.communities.length === 0) {
+      try {
+        const communityService = uniCloud.importObject('community-service')
+        const communities = await communityService.getUserCommunities()
+        userStore.setCommunities(communities || [])
+      } catch (e) {
+        console.error('Load communities error:', e)
+      }
+    }
+  } else if (!token && userStore.isLogin) {
+    // Token was removed (e.g. expired), sync logout state
+    userStore.logout()
+  }
+
   // Refresh communities when page is shown (user might have just joined a community)
   if (userStore.isLogin && communityOptions.value.length > 0 && !formData.community_id) {
     if (communityOptions.value.length === 1) {
@@ -430,6 +452,13 @@ async function handleSubmit() {
     })
 
     showToast('任务发布成功！', 'success')
+
+    // Update local balance after successful publish
+    if (userStore.userInfo) {
+      const deducted = Number(formData.reward) || 0
+      const newBalance = Math.max(0, (userStore.userInfo.balance || 0) - deducted)
+      userStore.updateBalance(newBalance)
+    }
 
     // Reset form after successful publish
     resetForm()

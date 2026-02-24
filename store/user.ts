@@ -48,15 +48,20 @@ interface UserState {
 }
 
 export const useUserStore = defineStore('user', {
-  state: (): UserState => ({
-    token: uni.getStorageSync('uni_id_token') || '',
-    userInfo: null,
-    communities: [],
-    currentCommunityId: uni.getStorageSync('current_community_id') || '',
-    isLogin: false,
-    isInfoComplete: false,
-    hasCommunity: false
-  }),
+  state: (): UserState => {
+    const token = uni.getStorageSync('uni_id_token') || ''
+    const expired = uni.getStorageSync('uni_id_token_expired')
+    const isTokenValid = !!token && (!expired || Date.now() <= expired)
+    return {
+      token,
+      userInfo: null,
+      communities: [],
+      currentCommunityId: uni.getStorageSync('current_community_id') || '',
+      isLogin: isTokenValid,
+      isInfoComplete: false,
+      hasCommunity: false
+    }
+  },
 
   getters: {
     userId(): string {

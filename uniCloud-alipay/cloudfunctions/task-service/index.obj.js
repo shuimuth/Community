@@ -77,11 +77,16 @@ module.exports = {
       throw new Error('Reward must be between 5-1000')
     }
 
-    // Check credit score from user-profile
+    // Check credit score and balance from user-profile
     const profileRes = await db.collection('user-profile').where({ user_id: this.uid }).limit(1).get()
     const profile = profileRes.data?.[0]
     if (profile && (profile.credit_score || 100) < 40) {
       throw new Error('Credit score too low to publish tasks')
+    }
+
+    // Check if publisher has enough balance to pay the reward
+    if (!profile || (profile.balance || 0) < reward) {
+      throw new Error('余额不足，请先充值')
     }
 
     // Get basic user info
@@ -92,9 +97,10 @@ module.exports = {
     const user = userRes.data[0]
 
     // Get config for fee calculation
+    // Service fee is deducted from the receiver's settlement, not charged to the publisher
     const config = await _getTaskConfig()
     const service_fee = Math.round(reward * config.service_fee_rate * 100) / 100
-    const total_amount = Math.round((reward + service_fee) * 100) / 100
+    const total_amount = reward
 
     // Generate order number
     const order_no = 'T' + Date.now() + Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -126,23 +132,41 @@ module.exports = {
     const taskRes = await db.collection('tasks').add(taskData)
 
     // Create task order record
+    // Publisher only pays the reward amount; service fee is deducted from receiver on settlement
     await db.collection('task_orders').add({
       task_id: taskRes.id,
       user_id: this.uid,
       order_no,
-      amount: total_amount,
+      amount: reward,
       reward,
       service_fee,
+      service_fee_from: 'receiver',
       pay_type: 'wxpay',
       status: 'paid', // Simplified: mark as paid directly
       paid_at: Date.now(),
       created_at: Date.now()
     })
 
-    // Update user task count in user-profile
+    // Deduct reward from publisher balance and update task count in user-profile
     await db.collection('user-profile').where({ user_id: this.uid }).update({
+      balance: dbCmd.inc(-reward),
       task_published_count: dbCmd.inc(1),
       updated_at: Date.now()
+    })
+
+    // Create transaction record for publisher expense
+    const updatedProfileRes = await db.collection('user-profile').where({ user_id: this.uid }).limit(1).get()
+    const updatedProfile = updatedProfileRes.data?.[0] || {}
+    await db.collection('transactions').add({
+      user_id: this.uid,
+      type: 'expense',
+      amount: reward,
+      balance_after: updatedProfile.balance || 0,
+      related_id: taskRes.id,
+      related_type: 'task',
+      description: '发布任务"' + title + '"支付报酬',
+      status: 'completed',
+      created_at: Date.now()
     })
 
     // Update community task count

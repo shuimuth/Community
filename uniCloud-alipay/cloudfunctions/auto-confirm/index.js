@@ -41,9 +41,13 @@ exports.main = async (event, context) => {
         updated_at: Date.now()
       })
 
-      // Settlement: transfer reward to receiver via user-profile
+      // Settlement: transfer reward minus service fee to receiver via user-profile
+      // Service fee is deducted from the receiver's earnings
+      const service_fee = task.service_fee || 0
+      const receiverEarnings = Math.round((task.reward - service_fee) * 100) / 100
+
       await db.collection('user-profile').where({ user_id: task.receiver_id }).update({
-        balance: dbCmd.inc(task.reward),
+        balance: dbCmd.inc(receiverEarnings),
         task_completed_count: dbCmd.inc(1),
         credit_score: dbCmd.inc(2),
         updated_at: Date.now()
@@ -55,11 +59,11 @@ exports.main = async (event, context) => {
       await db.collection('transactions').add({
         user_id: task.receiver_id,
         type: 'income',
-        amount: task.reward,
+        amount: receiverEarnings,
         balance_after: receiverProfile.balance || 0,
         related_id: task._id,
         related_type: 'task',
-        description: `完成任务"${task.title}"获得报酬（自动确认）`,
+        description: `完成任务"${task.title}"获得报酬（自动确认，已扣除平台服务费 ¥${service_fee}）`,
         status: 'completed',
         created_at: Date.now()
       })
@@ -79,7 +83,7 @@ exports.main = async (event, context) => {
         {
           user_id: task.receiver_id,
           title: '任务报酬到账',
-          content: `任务"${task.title}"已自动确认完成，报酬 ¥${task.reward} 已到账`,
+          content: `任务"${task.title}"已自动确认完成，报酬 ¥${receiverEarnings} 已到账`,
           type: 'task_confirmed',
           related_id: task._id,
           related_type: 'task',

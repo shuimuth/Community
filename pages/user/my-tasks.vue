@@ -321,7 +321,7 @@ async function submitComplete(task: any) {
 
   try {
     uni.showLoading({ title: '提交中...' })
-    await callCloudObject('task-flow', 'receiverComplete', { task_id: task._id })
+await callCloudObject('task-flow', 'receiverConfirm', { task_id: task._id })
     uni.showToast({ title: '已提交完成', icon: 'success' })
     refresh()
   } catch (e) {

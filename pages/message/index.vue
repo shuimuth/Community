@@ -492,6 +492,8 @@ onShow(() => {
     font-size: $uni-font-size-sm;
     color: $uni-text-color-grey;
     line-height: $uni-line-height-base;
+    display: block;
+    width: 100%;
   }
 
   // ── Unread dot ──
